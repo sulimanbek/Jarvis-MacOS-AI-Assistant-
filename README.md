@@ -15,14 +15,4 @@ Modular assistant framework
 
 
 Architecture
-User Voice
-   ↓
-Speech Recognition
-   ↓
-Command Processor
-   ↓
-AI Reasoning (LLM)
-   ↓
-System Action
-   ↓
-Response via Text-to-Speech
+User Voice   ->  Speech Recognition   ->  Command Processor   ->  AI Reasoning (LLM)   ->  System Action   ->  Response via Text-to-Speech
