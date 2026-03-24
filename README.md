@@ -1,18 +1,35 @@
-Jarvis – AI Voice Assistant for macOS
+# Jarvis – AI Voice Assistant for macOS
 
-Jarvis is a Python-based AI assistant designed to interact with macOS through voice commands, large language models, and system automation.
-The goal of the project is to build a personal AI agent capable of controlling computer workflows through natural language interaction.
+Jarvis is a Python-based AI voice assistant built for macOS. It combines speech recognition, language model reasoning, and macOS automation to let users control workflows through natural language commands.
 
+The project is designed as a personal AI agent that can listen, understand, decide, and execute actions such as opening apps, playing music, launching websites, and handling assistant-style interactions on macOS.
 
-Features
-Voice command interface
-Speech-to-text processing
-AI reasoning using large language models
-Mac system automation
-Music playback automation
-Command processing architecture
-Modular assistant framework
+---
 
+## Features
 
-Architecture
-User Voice   ->  Speech Recognition   ->  Command Processor   ->  AI Reasoning (LLM)   ->  System Action   ->  Response via Text-to-Speech
+- Voice command interface
+- Speech-to-text transcription
+- AI reasoning with large language models
+- macOS app and system automation
+- Music playback handling
+- Text-to-speech responses
+- Modular command routing architecture
+- Extensible assistant framework for future tools
+
+---
+
+## Architecture
+
+```text
+User Voice
+   ↓
+Speech Recognition
+   ↓
+Command Processor
+   ↓
+AI Reasoning (LLM)
+   ↓
+System Action
+   ↓
+Response via Text-to-Speech
