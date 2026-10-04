@@ -24,6 +24,7 @@ import {
   watchBlades,
   watchCapture,
   watchUi,
+  watchCore,
   watchConnection,
   connectedLabels,
   usingBridge,
@@ -31,7 +32,7 @@ import {
 } from './lib/brain'
 import { startAnalyser, micLevel } from './lib/audio'
 import { probeCapabilities } from './lib/capabilities'
-import { env } from './config'
+import { env, CORE_MODE } from './config'
 
 /**
  * The conversation.
@@ -365,6 +366,46 @@ export default function App() {
     watchPanels((panel) => store.getState().pushPanel(panel))
     watchBlades((blade) => store.getState().pushBlade(blade))
 
+    // In core mode the Python process is the one listening and talking; it
+    // reports each step and this page just shows it.
+    watchCore((e) => {
+      const s = store.getState()
+      switch (e.kind) {
+        case 'online':
+          s.setPhase('dormant')
+          break
+        case 'state': {
+          const phases = {
+            idle: 'dormant',
+            listening: 'listening',
+            thinking: 'thinking',
+            speaking: 'speaking',
+          } as const
+          const next = phases[e.state as keyof typeof phases]
+          if (next) {
+            if (next !== 'thinking') s.setActiveTool(null)
+            s.setPhase(next)
+          }
+          break
+        }
+        case 'heard':
+          s.setCaption(e.text ?? '')
+          s.pushTurn({ id: `u${Date.now()}`, role: 'user', text: e.text ?? '' })
+          break
+        case 'reply':
+          s.setCaption('')
+          s.pushTurn({ id: `j${Date.now()}`, role: 'jarvis', text: e.text ?? '' })
+          break
+        case 'tool':
+          s.setActiveTool(e.text ?? null)
+          s.setPhase('tooling')
+          break
+        case 'error':
+          s.setError(e.text ?? 'The core reported an error.')
+          break
+      }
+    })
+
     /**
      * JARVIS asking to see something.
      *
@@ -501,7 +542,7 @@ export default function App() {
     // failure here costs the animation and nothing else — saying "voice input
     // is unavailable" was both alarming and untrue.
     try {
-      await startAnalyser()
+      if (!CORE_MODE) await startAnalyser()
     } catch {
       console.warn(
         '[jarvis] no microphone stream — the reactor will not pulse with your ' +
@@ -512,17 +553,19 @@ export default function App() {
     // Ask the bridge which speech engines exist before the loop starts, so the
     // first turn already uses ElevenLabs when a key is present and the browser
     // fallback when it is not — no flag, no reload.
-    await probeCapabilities()
+    if (!CORE_MODE) {
+      await probeCapabilities()
 
-    // One voice loop, started once, running until the page closes.
-    voice.current = await startVoice({
-      mode,
-      onWake,
-      onSpeechStart,
-      onPartial,
-      onUtterance,
-      onError: onVoiceError,
-    })
+      // One voice loop, started once, running until the page closes.
+      voice.current = await startVoice({
+        mode,
+        onWake,
+        onSpeechStart,
+        onPartial,
+        onUtterance,
+        onError: onVoiceError,
+      })
+    }
 
     store.getState().setPhase('dormant')
   }
@@ -660,9 +703,11 @@ export default function App() {
       }
 
       // Space starts a turn without the wake word. Worth using while filming so
-      // a missed wake word doesn't cost a take.
+      // a missed wake word doesn't cost a take. In core mode the Python process
+      // owns the microphone, so Space only ever powers the page on.
       if (e.code !== 'Space' || e.repeat) return
       e.preventDefault()
+      if (CORE_MODE && store.getState().phase !== 'offline') return
 
       const phase = store.getState().phase
       if (phase === 'offline') {

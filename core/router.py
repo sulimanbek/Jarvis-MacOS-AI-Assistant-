@@ -1,6 +1,8 @@
 import difflib
 import re
 
+from config import BRAIN_MODE
+from core.brain_claude import think_claude
 from core.brain_local import think_local
 from memory.context import (
     get_last_action,
@@ -447,6 +449,12 @@ def _validate_decision(decision: dict) -> dict[str, str | None]:
 
 
 def _route_llm(original: str) -> dict[str, str | None]:
+    # Claude first when enabled. It returns None if the bridge is down or its
+    # turn failed, and then the local model takes over exactly as before.
+    if BRAIN_MODE == "claude":
+        claude_decision = think_claude(original)
+        if claude_decision is not None:
+            return claude_decision
     return _validate_decision(think_local(original))
 
 

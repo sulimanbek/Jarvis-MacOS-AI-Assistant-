@@ -372,7 +372,7 @@ def test_main_catches_per_iteration_exception_then_exits_on_keyboard_interrupt(m
     monkeypatch.setattr(daemon, "ensure_ollama_running", lambda: True)
 
     listener = _FakeListener([RuntimeError("listener blew up"), KeyboardInterrupt()])
-    monkeypatch.setattr(daemon, "ContinuousListener", lambda: listener)
+    monkeypatch.setattr(daemon, "ContinuousListener", lambda **kwargs: listener)
 
     logged = []
     monkeypatch.setattr(

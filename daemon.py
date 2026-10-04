@@ -18,9 +18,11 @@ load_dotenv()
 
 from audio.listener import ContinuousListener
 from audio.tts import speak, speak_ack
-from config import WHISPER_BIN, WHISPER_MODEL
+from config import BRAIN_MODE, WHISPER_BIN, WHISPER_MODEL
 from core.agent import run_agent
+from core.bridge_client import emit_event, get_client
 from core.executor import execute
+from core.mac_actions import set_confirmer
 from core.router import route
 from core.state_machine import JarvisState, State
 from core.stt.whisper_cpp import transcribe
@@ -116,6 +118,7 @@ def _process_command(user_text: str, listener: ContinuousListener):
 
         result = run_agent(user_text, confirm_step=confirm_step)
         add_message("assistant", result.get("message", ""))
+        emit_event("reply", text=result.get("message", ""), source="agent")
         return
 
     # Confirmation gate (only for high-risk tools configured in policy.json)
@@ -135,6 +138,9 @@ def _process_command(user_text: str, listener: ContinuousListener):
         response = (result.get("message") or "Done.").strip()
         print(f"🤖 Jarvis: {response}")
         add_message("assistant", response)
+        source = decision.get("_source") or ("local" if decision.get("tool") is None else "fast")
+        emit_event("reply", text=response, source=source)
+        emit_event("state", state="speaking")
         speak(response)
 
     except Exception as e:
@@ -158,7 +164,18 @@ def main():
         print("⚠️  Ollama could not start. Non-LLM commands will still work.")
 
     state    = JarvisState()
-    listener = ContinuousListener()
+    listener = ContinuousListener(on_triggered=lambda: emit_event("state", state="listening"))
+
+    # Lets Claude's mac_action requests ask you for a spoken yes before they run.
+    set_confirmer(lambda decision: _confirm_action(listener, decision))
+
+    if BRAIN_MODE == "claude":
+        if get_client().warm():
+            print("✅ Claude bridge connected.")
+        else:
+            print("⚠️  Claude bridge not reachable — using the local model. "
+                  "Start it with scripts/start_all.sh")
+    emit_event("online", text="Jarvis online")
 
     speak("Jarvis online.")
     print("🟢 Jarvis running. Say the wake word or double-clap to activate.")
@@ -167,6 +184,7 @@ def main():
         while True:
             try:
                 state.transition(State.IDLE)
+                emit_event("state", state="idle")
 
                 audio, sr = listener.listen_for_command()
 
@@ -175,6 +193,7 @@ def main():
 
                 # ── Transcribe ────────────────────────────────────────────
                 state.transition(State.PLANNING)
+                emit_event("state", state="thinking")
                 try:
                     user_text = transcribe(audio, sr)
                 except Exception as e:
@@ -187,6 +206,7 @@ def main():
                     continue
 
                 print(f"🧠 You said: {user_text}")
+                emit_event("heard", text=user_text)
 
                 # ── Execute ───────────────────────────────────────────────
                 state.transition(State.EXECUTING)

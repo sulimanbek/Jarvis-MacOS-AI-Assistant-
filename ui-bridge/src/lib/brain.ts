@@ -49,6 +49,11 @@ export function watchPanels(fn: (panel: Panel) => void): void {
   if (usingBridge) bridge.watchPanels(fn)
 }
 
+/** What the Python core reports (state, heard, reply, tool). Bridge only. */
+export function watchCore(fn: (e: bridge.CoreEvent) => void): void {
+  if (usingBridge) bridge.watchCore(fn)
+}
+
 /** Blades — the big surface — arrive the same way, from the `blade` tool. Like
  *  panels and the ui_* commands, this is a bridge capability: the direct path
  *  has no channel for a server to volunteer anything mid-turn. */

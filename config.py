@@ -66,5 +66,25 @@ WAKE_WORD_MODEL = "alexa"
 WAKE_WORD_THRESHOLD = 0.5       # 0.0–1.0 — raise to reduce false triggers
 
 
+# ---------- CLAUDE BRAIN / HUD (ui-bridge) ----------
+# Who answers requests the regex fast-path can't handle:
+#   "claude" — Claude via ui-bridge, falling back to Ollama if the bridge is down
+#   "local"  — Ollama only (fully offline; the bridge is never contacted)
+# Override without editing this file: JARVIS_BRAIN=local python daemon.py
+BRAIN_MODE = os.environ.get("JARVIS_BRAIN", "claude").strip().lower()
+
+# The bridge's private channel for this process. The token file is written by
+# the bridge on each start (owner-only) and read here on each connect.
+BRIDGE_URL = os.environ.get("JARVIS_BRIDGE_URL", "ws://127.0.0.1:8787/core")
+BRIDGE_TOKEN_FILE = expand("~/.jarvis/bridge-token")
+
+CLAUDE_TIMEOUT = 45             # seconds to wait for a whole Claude turn
+CLAUDE_CONNECT_TIMEOUT = 2      # seconds to wait when connecting to the bridge
+CLAUDE_RETRY_COOLDOWN = 15      # after a failure, don't retry the bridge for this long
+
+# Show state, transcripts and replies on the HUD (silently skipped if it's not running)
+HUD_EVENTS = True
+
+
 # ---------- GENERAL ----------
 DEBUG = True

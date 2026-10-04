@@ -6,3 +6,4 @@ numpy
 pynput
 openwakeword
 onnxruntime
+websockets

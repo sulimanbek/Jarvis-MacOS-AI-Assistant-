@@ -23,7 +23,11 @@ python daemon.py
 - whisper-cli at `/opt/homebrew/bin/whisper-cli`
 - Whisper model at `~/whisper_models/ggml-base.en.bin`
 
-No build step, no test suite, no linter configuration.
+No build step. Tests: `pytest` (config in `pyproject.toml`); lint: `ruff`.
+
+**Everything at once (Claude brain + HUD + Python core):** `scripts/start_all.sh`
+(`--ptt` push-to-talk, `--writes` allow Claude to act in the browser, `--local`
+fully offline). Needs Node 20+ and a Claude Code login.
 
 ## Two Entry Points
 
@@ -39,10 +43,29 @@ No build step, no test suite, no linter configuration.
 Three-tier routing:
 1. **Fast-path** — regex/string matching for play, open, volume, memory queries ("play that again"). Zero LLM cost.
 2. **Multi-step detection** — compound commands ("open Safari and then play Mozart") route to `{"tool": "__agent__"}`.
-3. **LLM fallback** — `core/brain_local.py` via Ollama.
+3. **LLM fallback** — Claude via `core/brain_claude.py` (when `BRAIN_MODE = "claude"` and the bridge is up), otherwise `core/brain_local.py` via Ollama.
 
 ### Agent Pipeline (core/agent.py)
 Handles multi-step commands. Calls a structured JSON planner LLM, validates the plan via `core/plan_validator.py` (tool allowlist, max 5 steps, no shell commands), executes each step through the executor, and verifies each result via `core/verifier.py` with one retry on retryable failures. Speaks progress updates between steps.
+
+### Claude brain + HUD (core/brain_claude.py, core/bridge_client.py, ui-bridge/)
+`ui-bridge/` is a vendored, hardened copy of adewaskar/jarvis (MIT; see `ui-bridge/NOTICE.md`):
+a Node bridge running the Claude Agent SDK plus a React/Three.js holographic HUD.
+
+- The router's LLM fallback tries **Claude first** (`BRAIN_MODE = "claude"`), then Ollama if the
+  bridge is down or Claude's turn fails. The regex fast-path and multi-step agent stay local and
+  never touch Claude. `BRAIN_MODE = "local"` (or `JARVIS_BRAIN=local`) never contacts the bridge.
+- Python connects to the bridge's private `/core` WebSocket with a token the bridge writes
+  (owner-only) to `~/.jarvis/bridge-token`. `BridgeClient.ask()` sends a request and streams
+  back Claude's answer; `emit()` pushes state/heard/reply events that the HUD displays.
+  The HUD runs display-only (`VITE_CORE_MODE=1`): Python keeps the mic, whisper and `say`.
+- Claude can act on the Mac through the bridge's `mac_action` tool, which calls back into Python
+  (`core/mac_actions.py`). Those calls go through the same validator and executor, but are held to
+  a stricter bar than your voice: `browser`/`open`/`shortcut` always need a spoken yes, and
+  `clipboard_read`/`screenshot` are refused (a model can be steered by text it read).
+- Bridge hardening lives in `ui-bridge/bridge/server.mjs` (loopback bind, origin/referer checks,
+  sandboxed agent files, opt-in MCP servers, confirmation + `disallowedTools` for effectful tools).
+  `ui-bridge/README.md` has a "Local hardening" section.
 
 ### Brain (core/brain_local.py)
 Sends transcribed text to Ollama with a JSON-response system prompt. Returns `{"tool": "app"|"music"|"browser"|"shortcut"|"system"|null, ...}`. Configurable personalities via `PERSONALITY_MODE` in `config.py`: `"siri"`, `"smooth"`, `"professional"`, `"chill"`.
@@ -84,5 +107,9 @@ All tunables are in `config.py`:
 - `WAKE_WORD_MODEL`, `WAKE_WORD_THRESHOLD` — openWakeWord settings (daemon mode)
 - `CLAP_ENERGY_THRESHOLD`, `CLAP_MAX_GAP_MS` — double-clap detection tuning
 - `AGENT_MAX_STEPS` — hard cap on multi-step plan length (default: 5)
+- `BRAIN_MODE`, `BRIDGE_URL`, `BRIDGE_TOKEN_FILE` — Claude/HUD bridge (see above)
+- `CLAUDE_TIMEOUT`, `CLAUDE_CONNECT_TIMEOUT`, `CLAUDE_RETRY_COOLDOWN` — bridge timing; after a
+  failure the bridge isn't retried for the cooldown, so a missing bridge costs one short attempt
+- `HUD_EVENTS` — turn HUD updates on/off
 
 `.env` contains `OPENAI_API_KEY` — present but not used (Ollama is the active LLM).

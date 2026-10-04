@@ -1,3 +1,4 @@
+import contextlib
 import subprocess
 import threading
 import time
@@ -48,9 +49,11 @@ def _speak_sync(text: str):
 
 
 class ContinuousListener:
-    def __init__(self):
+    def __init__(self, on_triggered=None):
         self.detector = WakeWordDetector(WAKE_WORD_MODEL, WAKE_WORD_THRESHOLD)
         self._stop_event = threading.Event()
+        # Called once when a wake word or double clap fires, before "Yes?".
+        self.on_triggered = on_triggered
 
     def stop(self):
         self._stop_event.set()
@@ -130,6 +133,10 @@ class ContinuousListener:
 
         if self._stop_event.is_set():
             return np.array([], dtype=np.float32), AUDIO_SAMPLE_RATE
+
+        if self.on_triggered is not None:
+            with contextlib.suppress(Exception):
+                self.on_triggered()
 
         # ── Acknowledge (blocking so mic doesn't capture this) ────────────
         _speak_sync("Yes?")

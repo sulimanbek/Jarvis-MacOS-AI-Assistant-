@@ -7,8 +7,10 @@ load_dotenv()
 
 from audio.ptt import record_push_to_talk
 from audio.tts import speak
-from config import WHISPER_BIN, WHISPER_MODEL
+from config import BRAIN_MODE, WHISPER_BIN, WHISPER_MODEL
+from core.bridge_client import emit_event, get_client
 from core.executor import execute
+from core.mac_actions import set_confirmer
 from core.router import route
 from core.stt.whisper_cpp import transcribe
 from memory.context import add_message
@@ -101,8 +103,18 @@ def main():
         speak("Jarvis ready, but my local model could not be started.")
         print("❌ Ollama could not be started. Jarvis will still run for non-LLM commands.")
 
+    # Lets Claude's mac_action requests ask you for a spoken yes before they run.
+    set_confirmer(_confirm_action)
+    if BRAIN_MODE == "claude":
+        if get_client().warm():
+            print("✅ Claude bridge connected.")
+        else:
+            print("⚠️ Claude bridge not reachable — using the local model.")
+    emit_event("online", text="Jarvis online")
+
     while True:
         try:
+            emit_event("state", state="idle")
             audio, sr = record_push_to_talk()
 
             if getattr(audio, "size", 0) == 0:
@@ -126,6 +138,8 @@ def main():
                 continue
 
             print("🧠 You said:", user_text)
+            emit_event("heard", text=user_text)
+            emit_event("state", state="thinking")
             add_message("user", user_text)
 
             lowered = user_text.lower().strip()
@@ -176,6 +190,9 @@ def main():
                 if response:
                     print("🤖 Jarvis:", response)
                     add_message("assistant", response)
+                    source = decision.get("_source") or ("local" if decision.get("tool") is None else "fast")
+                    emit_event("reply", text=response, source=source)
+                    emit_event("state", state="speaking")
                     speak(response)
                 else:
                     speak("Done.")

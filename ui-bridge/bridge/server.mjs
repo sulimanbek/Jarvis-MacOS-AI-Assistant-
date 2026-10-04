@@ -21,8 +21,10 @@ import { displayServer } from './panels.mjs'
 import { uiServer } from './ui.mjs'
 import { chromeAvailable, chromeServer } from './chrome.mjs'
 import { visionServer } from './vision.mjs'
+import { macServer } from './mac.mjs'
 import { homedir, tmpdir } from 'node:os'
-import { mkdirSync, readFileSync, realpathSync } from 'node:fs'
+import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
+import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { readFile, realpath, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve as resolvePath } from 'node:path'
 import { openRemote, proxyError, vetTarget, PROXY_UA } from './net.mjs'
@@ -44,6 +46,43 @@ const HOST = process.env.JARVIS_BRIDGE_HOST ?? '127.0.0.1'
  */
 const SANDBOX = join(homedir(), '.jarvis-sandbox')
 mkdirSync(SANDBOX, { recursive: true, mode: 0o700 })
+
+/**
+ * The Python core's private channel (ws path /core).
+ *
+ * The browser HUD is untrusted by comparison: any local page can try to open a
+ * socket. The core is the thing that owns the microphone and runs actions on
+ * the Mac, so it proves itself with a random token written, owner-only, to a
+ * file outside the agent's sandbox. The token changes on every start. A browser
+ * cannot be the core: it would have to send a custom header and no Origin.
+ */
+const CORE_DIR = join(homedir(), '.jarvis')
+const CORE_TOKEN_FILE = join(CORE_DIR, 'bridge-token')
+const CORE_TOKEN = randomBytes(32).toString('hex')
+mkdirSync(CORE_DIR, { recursive: true, mode: 0o700 })
+writeFileSync(CORE_TOKEN_FILE, CORE_TOKEN, { mode: 0o600 })
+chmodSync(CORE_TOKEN_FILE, 0o600)
+
+const tokenOk = (given) => {
+  if (typeof given !== 'string') return false
+  const a = Buffer.from(given)
+  const b = Buffer.from(CORE_TOKEN)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
+/** Browser pages showing the HUD. Core events and agent output are fanned out here. */
+const hudClients = new Set()
+const broadcastHud = (msg) => {
+  const raw = JSON.stringify(msg)
+  for (const c of hudClients) if (c.readyState === c.OPEN) c.send(raw)
+}
+
+/** Questions the core's agent session has put to the HUD or to Python, by id. */
+const coreWaiting = new Map()
+let coreAsks = 0
+
+/** What a core event may say to the HUD. Anything else is dropped. */
+const CORE_EVENT_KINDS = new Set(['online', 'state', 'heard', 'reply', 'route', 'error'])
 
 /**
  * A crash here takes the whole assistant down mid-sentence, and most of what
@@ -303,6 +342,10 @@ function decideTool(name) {
     // a write and would hold the whole surface back behind ALLOW_WRITES.
     if (server === 'jarvis' || server === 'jarvis_ui') return true
 
+    // The Mac, via Python. Python re-checks every call against its own tool
+    // allowlist and policy, and asks for a spoken yes on the risky ones.
+    if (server === 'jarvis_mac') return true
+
     // The browser server gates itself, at construction: chromeServer() only
     // builds the acting tools — click, type, form input, close tab — when
     // ALLOW_WRITES is set, so anything that reaches here at all is something
@@ -400,6 +443,16 @@ function needsConfirmation(name) {
   if (!server || server.startsWith('jarvis')) return false
   return EFFECTFUL_VERB.test(mcpToolOf(name)) && !VETO_EXEMPT.has(`${server}__${mcpToolOf(name)}`)
 }
+
+const CORE_ADDENDUM = `
+
+You are running behind a local Mac assistant. It already handles the simple,
+fixed requests itself — opening an app, playing a song, volume, battery — so
+what reaches you is everything else. Your reply is spoken aloud by the Mac's
+own voice, so keep it to a couple of short sentences and do not use lists,
+markup or emoji. When the user asks you to do something on the Mac, use the
+mac_action tool, and tell them in a few words what happened. If a request
+needs the camera, the screen or the web, say so and use the right tool.`
 
 const SYSTEM_PROMPT = `You are JARVIS. You are speaking out loud to one person.
 
@@ -1112,6 +1165,17 @@ const wss = new WebSocketServer({
   // 403 would look like the bridge simply isn't running.
   verifyClient: ({ origin, req }, done) => {
     const path = (req.url ?? '/').split('?')[0]
+    if (path === '/core') {
+      if (origin) {
+        console.warn('[jarvis] rejected /core from a browser origin')
+        return done(false, 403, 'Forbidden')
+      }
+      if (!tokenOk(req.headers['x-jarvis-token'])) {
+        console.warn('[jarvis] rejected /core: bad token')
+        return done(false, 401, 'Unauthorized')
+      }
+      return done(true)
+    }
     if (path !== '/' && path !== '/ws') {
       console.warn(`[jarvis] rejected websocket on path ${path}`)
       return done(false, 403, 'Forbidden')
@@ -1129,6 +1193,7 @@ const wss = new WebSocketServer({
 server.listen(PORT, HOST)
 
 console.log(`[jarvis] bridge listening on ws://${HOST}:${PORT}`)
+console.log(`[jarvis] core channel /core · token in ${CORE_TOKEN_FILE}`)
 console.log(
   `[jarvis] agent sandbox ${SANDBOX} · mcp servers: ${Object.keys(MCP_SERVERS).join(', ') || '(none)'}`,
 )
@@ -1170,14 +1235,20 @@ const RESULT_FAILURES = {
   default: 'The turn ended without an answer.',
 }
 
-wss.on('connection', (socket) => {
-  console.log('[jarvis] client connected')
+wss.on('connection', (socket, req) => {
+  const isCore = (req.url ?? '/').split('?')[0] === '/core'
+  console.log(`[jarvis] ${isCore ? 'core' : 'client'} connected`)
 
-  // Answer the HUD straight away rather than making it wait for the agent's
-  // first turn. Refined later by the real init message.
-  socket.send(
-    JSON.stringify({ type: 'ready', servers: Object.keys(MCP_SERVERS) }),
-  )
+  if (isCore) {
+    socket.send(JSON.stringify({ type: 'hello', model: MODEL, writes: ALLOW_WRITES }))
+  } else {
+    hudClients.add(socket)
+    // Answer the HUD straight away rather than making it wait for the agent's
+    // first turn. Refined later by the real init message.
+    socket.send(
+      JSON.stringify({ type: 'ready', servers: Object.keys(MCP_SERVERS) }),
+    )
+  }
 
   /** Resolves the pending user message into the SDK's input generator. */
   let deliver = null
@@ -1201,7 +1272,27 @@ wss.on('connection', (socket) => {
   }
 
   const send = (msg) => {
-    if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg))
+    if (!isCore) {
+      if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg))
+      return
+    }
+    // A core session talks to two audiences. What the agent draws — panels,
+    // blades, retints — belongs on the HUD. The turn itself (text, tool, done,
+    // error) goes back to Python, which speaks it.
+    switch (msg.type) {
+      case 'panel':
+      case 'blade':
+      case 'ui':
+        broadcastHud(msg)
+        break
+      case 'ready':
+        break
+      default:
+        if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(msg))
+        if (msg.type === 'tool') {
+          broadcastHud({ type: 'core', kind: 'tool', text: String(msg.name ?? '').slice(0, 80) })
+        }
+    }
   }
 
   /**
@@ -1230,7 +1321,7 @@ wss.on('connection', (socket) => {
   const waiting = new Map()
   let asks = 0
 
-  const ask = (kind, args, timeoutMs = 20_000) =>
+  const askBrowser = (kind, args, timeoutMs = 20_000) =>
     new Promise((resolve, reject) => {
       if (socket.readyState !== socket.OPEN) {
         return reject(new Error('the interface is not connected'))
@@ -1243,6 +1334,32 @@ wss.on('connection', (socket) => {
       waiting.set(id, { resolve, timer })
       send({ type: kind, id, ...args })
     })
+
+  /**
+   * The core's version. Actions go to Python; camera and confirm requests go to
+   * a HUD page. The answer is accepted only from the socket it was sent to, so
+   * a second tab cannot approve something it was never asked.
+   */
+  const askCore = (kind, args, timeoutMs = 20_000) =>
+    new Promise((resolve, reject) => {
+      if (socket.readyState !== socket.OPEN) {
+        return reject(new Error('the Mac core is not connected'))
+      }
+      const toPython = kind === 'action'
+      const target = toPython
+        ? socket
+        : [...hudClients].find((c) => c.readyState === c.OPEN)
+      if (!target) return reject(new Error('the interface is not open'))
+      const id = `c${++coreAsks}`
+      const timer = setTimeout(() => {
+        coreWaiting.delete(id)
+        reject(new Error('no answer in time'))
+      }, timeoutMs)
+      coreWaiting.set(id, { resolve, timer, from: target })
+      target.send(JSON.stringify({ type: kind, id, ...args }))
+    })
+
+  const ask = isCore ? askCore : askBrowser
 
   /**
    * Announcing a tool on the HUD, once, and only if it actually runs.
@@ -1345,12 +1462,16 @@ wss.on('connection', (socket) => {
         jarvis_chrome: chromeServer({ allowWrites: ALLOW_WRITES }),
         // The camera, which unlike everything else here has to ask and wait.
         jarvis_eyes: visionServer(ask),
+        // The Mac, through the Python core. Only a core session has one.
+        ...(isCore
+          ? { jarvis_mac: macServer((decision) => ask('action', { decision }, 90_000)) }
+          : {}),
       },
       // A plain system prompt, not the claude_code preset. The preset is
       // tuned for a coding agent — verbose, file-oriented, and a large chunk
       // of input tokens on every turn. Replacing it makes the persona stick,
       // keeps answers short enough to speak, and cuts cost per turn.
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: isCore ? SYSTEM_PROMPT + CORE_ADDENDUM : SYSTEM_PROMPT,
       // Run from the home directory so project-scoped MCP servers don't shadow
       // the global ones, and so file tools have a sane root.
       cwd: SANDBOX,
@@ -1603,6 +1724,29 @@ wss.on('connection', (socket) => {
         clearTimeout(slot.timer)
         slot.resolve(msg)
       }
+      // A core session's questions are answered by whichever socket was asked.
+      const coreSlot = coreWaiting.get(msg.id)
+      if (coreSlot && coreSlot.from === socket) {
+        coreWaiting.delete(msg.id)
+        clearTimeout(coreSlot.timer)
+        coreSlot.resolve(msg)
+      }
+    }
+
+    // Python reporting what it is doing, for the HUD to show. Only a known
+    // shape gets through; text is clipped.
+    if (isCore && msg.type === 'event' && msg.event && typeof msg.event === 'object') {
+      const e = msg.event
+      if (CORE_EVENT_KINDS.has(e.kind)) {
+        const clip = (v, n) => (typeof v === 'string' ? v.slice(0, n) : undefined)
+        broadcastHud({
+          type: 'core',
+          kind: e.kind,
+          state: clip(e.state, 20),
+          text: clip(e.text, 2000),
+          source: clip(e.source, 20),
+        })
+      }
     }
 
     if (msg.type === 'interrupt') {
@@ -1620,7 +1764,15 @@ wss.on('connection', (socket) => {
   })
 
   socket.on('close', () => {
-    console.log('[jarvis] client disconnected')
+    hudClients.delete(socket)
+    for (const [id, slot] of coreWaiting) {
+      if (slot.from === socket) {
+        clearTimeout(slot.timer)
+        coreWaiting.delete(id)
+        slot.resolve({ ok: false, error: 'the connection closed' })
+      }
+    }
+    console.log(`[jarvis] ${isCore ? 'core' : 'client'} disconnected`)
     closed = true
     deliver?.(null)
     session.close?.()

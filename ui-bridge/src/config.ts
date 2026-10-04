@@ -66,6 +66,16 @@ export const BACKEND: 'bridge' | 'direct' = choice(
 )
 
 /**
+ * Display-only mode, for use with the Python core.
+ *
+ * The core owns the microphone, speech recognition, quick commands and the
+ * voice, and reports what it is doing over the bridge. In this mode the page
+ * does none of that itself — no mic, no speech engines — and just shows state,
+ * what was heard, the reply, and anything Claude puts on the display.
+ */
+export const CORE_MODE = flag('VITE_CORE_MODE', import.meta.env.VITE_CORE_MODE, false)
+
+/**
  * Where the bridge lives. Derived once here rather than in each of the three
  * places that talk to it, so moving off the default port is a single edit.
  * `wss://` maps to `https://` on its own, which is why this is a prefix swap
