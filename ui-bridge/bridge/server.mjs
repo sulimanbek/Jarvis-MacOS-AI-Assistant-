@@ -145,7 +145,7 @@ const EFFORT = process.env.JARVIS_EFFORT ?? 'high'
  * what these lists mean. Keep both until the old names are certainly gone.
  */
 const READ_ONLY_BUILTINS = new Set([
-  'Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch', 'TodoWrite',
+  'Read', 'Glob', 'Grep', 'WebSearch', 'TodoWrite',
   'Task', 'Agent', 'ToolSearch',
   'ListMcpResources', 'ListMcpResourcesTool',
   'ReadMcpResource', 'ReadMcpResourceTool',
@@ -154,6 +154,9 @@ const READ_ONLY_BUILTINS = new Set([
 const WRITE_BUILTINS = new Set([
   'Bash', 'Write', 'Edit', 'MultiEdit', 'NotebookEdit',
   'KillShell', 'TaskStop',
+  // Not a write, but a request to a URL the model chose can carry data out in
+  // the URL itself. Held back with the writes, and confirmed when they are on.
+  'WebFetch',
 ])
 
 /**
@@ -285,6 +288,8 @@ const VETO_EXEMPT = new Set([
   'openrouter__send-feedback',
 ])
 
+const CHROME_EFFECTFUL = new Set(['chrome_navigate', 'chrome_network'])
+
 function decideTool(name) {
   if (READ_ONLY_BUILTINS.has(name)) return true
   if (WRITE_BUILTINS.has(name)) return ALLOW_WRITES
@@ -305,7 +310,12 @@ function decideTool(name) {
     // reading verbs out of the name would only get it wrong: `chrome_navigate`
     // begins with no read verb and would fall to the write branch, which would
     // withhold the one tool the whole server is for.
-    if (server === 'jarvis_chrome') return true
+    if (server === 'jarvis_chrome') {
+      // Navigation sends a request to a URL the model chose, from a browser that
+      // is signed in to your accounts, and chrome_network can read response
+      // bodies. Both can carry what the agent has read to an attacker's server.
+      return CHROME_EFFECTFUL.has(mcpToolOf(name)) ? ALLOW_WRITES : true
+    }
 
     // The camera. Not withheld behind ALLOW_WRITES: looking changes nothing,
     // and the real gate is the browser's own camera permission plus an
@@ -386,6 +396,7 @@ function needsConfirmation(name) {
   if (!ALLOW_WRITES) return false
   if (WRITE_BUILTINS.has(name)) return true
   const server = mcpServerOf(name)
+  if (server === 'jarvis_chrome') return CHROME_EFFECTFUL.has(mcpToolOf(name))
   if (!server || server.startsWith('jarvis')) return false
   return EFFECTFUL_VERB.test(mcpToolOf(name)) && !VETO_EXEMPT.has(`${server}__${mcpToolOf(name)}`)
 }
@@ -1368,6 +1379,9 @@ wss.on('connection', (socket) => {
       effort: EFFORT,
       maxTurns: 24,
       permissionMode: 'default',
+      // Belt and braces: in read-only mode these are removed from the model's
+      // toolbox outright, so a gap in canUseTool cannot let them run.
+      disallowedTools: ALLOW_WRITES ? [] : [...WRITE_BUILTINS],
       // Without this the SDK only emits whole assistant messages, and JARVIS
       // would sit silent until the entire answer was written. Partial events
       // are what let speech start on the first finished sentence.
@@ -1390,9 +1404,19 @@ wss.on('connection', (socket) => {
             message: 'Blocked: that location is outside the folders JARVIS may read.',
           }
         }
+        if (ok && toolName === 'mcp__jarvis_chrome__chrome_navigate') {
+          const url = String(input?.url ?? '').trim()
+          if (!/^https?:\/\//i.test(url) && !/^(back|forward)$/i.test(url)) {
+            return {
+              behavior: 'deny',
+              message: 'Blocked: only http and https addresses can be opened.',
+            }
+          }
+        }
         if (ok && needsConfirmation(toolName)) {
           try {
-            const reply = await ask('confirm', { tool: toolName }, 30_000)
+            const target = String(input?.url ?? input?.urlPattern ?? '').slice(0, 200)
+            const reply = await ask('confirm', { tool: toolName, target }, 30_000)
             ok = reply?.ok === true
           } catch {
             ok = false

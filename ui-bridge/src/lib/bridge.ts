@@ -32,6 +32,7 @@ type Frame = {
   ask?: string
   reason?: string
   tool?: string
+  target?: string
   mode?: string
   seconds?: number
   when?: string
@@ -210,7 +211,8 @@ function dispatch(ws: WebSocket) {
       const label = String(msg.tool ?? 'an action')
         .replace(/^mcp__/, '')
         .replace(/__/g, ' · ')
-      const ok = window.confirm(`Allow JARVIS to run: ${label}?`)
+      const target = msg.target ? `\n\n${String(msg.target)}` : ''
+      const ok = window.confirm(`Allow JARVIS to run: ${label}?${target}`)
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'reply', id: msg.id, ok }))
       }

@@ -315,6 +315,10 @@ All of this lives in `bridge/server.mjs`:
 - Only the read-only MCP servers load by default. Opt others in with
   `JARVIS_MCP_SERVERS=exa,android`.
 - With writes enabled, each effectful tool call asks for a yes in the browser.
+- `chrome_navigate`, `chrome_network` and `WebFetch` count as effectful (a URL the
+  model picks can carry data out). Only http(s) addresses may be opened, and the
+  confirm prompt shows the destination. In read-only mode the built-in write
+  tools are also removed with `disallowedTools`.
 - `connect-src` in the CSP names its hosts instead of allowing all of `https:`.
 
 ---
