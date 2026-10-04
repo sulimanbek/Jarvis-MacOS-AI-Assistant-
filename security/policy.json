@@ -1,0 +1,50 @@
+{
+  "require_confirmation_for_actions": true,
+  "confirm_tools": ["shortcut"],
+  "trusted_web_targets": [
+    "youtube",
+    "you tube",
+    "youtube.com",
+    "github",
+    "github.com",
+    "netflix",
+    "netflix.com",
+    "google",
+    "google.com",
+    "chatgpt",
+    "chat g p t",
+    "chatgpt.com",
+    "tradingview",
+    "trading view",
+    "tradingview.com",
+    "gmail",
+    "google mail",
+    "mail",
+    "linkedin",
+    "linked in",
+    "linkedin.com",
+    "etoro",
+    "e toro",
+    "e-toro",
+    "etoro.com"
+  ],
+  "blocked_url_patterns": [
+    "^https?://(?:localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0)(?::\\d+)?",
+    "^https?://(?:10\\.\\d+\\.\\d+\\.\\d+)",
+    "^https?://(?:192\\.168\\.\\d+\\.\\d+)",
+    "^https?://(?:172\\.(?:1[6-9]|2\\d|3[0-1])\\.\\d+\\.\\d+)",
+    "^file://"
+  ],
+  "strip_tracking_params": [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_term",
+    "utm_content",
+    "gclid",
+    "fbclid",
+    "mc_cid",
+    "mc_eid"
+  ],
+  "disable_unknown_site_search": true
+}

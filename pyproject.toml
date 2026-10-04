@@ -1,0 +1,36 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = [
+    "E501",  # line length is a soft goal, not a hard failure across this codebase
+]
+
+[tool.ruff.lint.per-file-ignores]
+# jarvis.py/daemon.py intentionally call load_dotenv() before importing
+# modules whose module-level constants read env-derived config.
+"jarvis.py" = ["E402"]
+"daemon.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = false
+check_untyped_defs = true
+exclude = ["^\\.venv/", "^tests/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=. --cov-report=term-missing"
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "tests/*",
+    ".venv/*",
+    "audio/listener.py",
+    "audio/ptt.py",
+    "audio/wake_word.py",
+]

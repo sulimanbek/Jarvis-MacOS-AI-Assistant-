@@ -1,0 +1,27 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Personal data: command history, conversation context, user profile
+memory/actions.json
+memory/context.json
+memory/profile.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+
+# Editor / OS
+.idea/
+.DS_Store
+
+# Local tooling state
+.claude/settings.local.json
+.omc/
+.remember/

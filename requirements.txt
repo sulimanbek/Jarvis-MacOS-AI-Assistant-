@@ -1,0 +1,8 @@
+python-dotenv
+requests
+sounddevice
+soundfile
+numpy
+pynput
+openwakeword
+onnxruntime
