@@ -84,6 +84,11 @@ cd ui-bridge && npm install && cd ..     # optional: only for Claude + HUD
 drag either file to the Dock. It checks first for an old Jarvis or something else on the ports and
 asks before stopping anything. `scripts/start_all.sh --check` does just that check.
 
+**Start at login:** `scripts/autostart.sh install` (or `install --local`) makes Terminal open
+Jarvis about 15 seconds after you log in. `status` shows what's set up, `start` runs it now,
+`uninstall` removes it. It goes through Terminal on purpose, so it uses the microphone, Calendar
+and Automation permissions you already gave Terminal.
+
 From a terminal:
 
 ```bash

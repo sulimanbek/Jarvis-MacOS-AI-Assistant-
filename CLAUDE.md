@@ -28,6 +28,9 @@ No build step. Tests: `pytest` (config in `pyproject.toml`); lint: `ruff`.
 **Everything at once (Claude brain + HUD + Python core):** double-click `Jarvis.command` (or
 `Jarvis (Local).command`), or run `scripts/start_all.sh`. It refuses to start over an old instance or
 a busy port 8787/5173 unless you confirm; `--check` only checks.
+`scripts/autostart.sh install|uninstall|status|start` manages a LaunchAgent (`com.jarvis.assistant`) that opens
+Terminal with `Jarvis.command` ~15s after login. It goes through Terminal on purpose: a background launchd
+process usually can't get microphone/Automation permission.
 (`--ptt` push-to-talk, `--writes` allow Claude to act in the browser, `--local` HUD with
 the local Ollama brain only, `--local --no-hud` headless and fully offline). Needs Node 20+
 and a Claude Code login for the Claude brain; `--local --no-hud` needs neither.
