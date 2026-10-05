@@ -79,12 +79,20 @@ cd ui-bridge && npm install && cd ..     # optional: only for Claude + HUD
 
 ## Run
 
+**Double-click** `Jarvis.command` in Finder (Claude brain + HUD) or `Jarvis (Local).command`
+(local brain + HUD, nothing goes to Claude). It opens a Terminal window; Ctrl-C stops it. You can
+drag either file to the Dock. It checks first for an old Jarvis or something else on the ports and
+asks before stopping anything. `scripts/start_all.sh --check` does just that check.
+
+From a terminal:
+
 ```bash
 scripts/start_all.sh            # bridge + HUD + always-on Jarvis (wake word / double clap)
 scripts/start_all.sh --ptt      # push-to-talk instead
 scripts/start_all.sh --writes   # let Claude click/type/navigate in the browser (each asks first)
 scripts/start_all.sh --local    # HUD + local Ollama brain; Claude is never contacted
 scripts/start_all.sh --local --no-hud   # headless and fully offline (no Node needed)
+scripts/start_all.sh --check    # check everything is ready; start nothing
 ```
 
 Open `http://localhost:5173` in Chrome (the script does this), click **INITIALISE**, then clap twice or say "hey jarvis".

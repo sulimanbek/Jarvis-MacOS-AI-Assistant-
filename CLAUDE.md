@@ -25,14 +25,16 @@ python daemon.py
 
 No build step. Tests: `pytest` (config in `pyproject.toml`); lint: `ruff`.
 
-**Everything at once (Claude brain + HUD + Python core):** `scripts/start_all.sh`
+**Everything at once (Claude brain + HUD + Python core):** double-click `Jarvis.command` (or
+`Jarvis (Local).command`), or run `scripts/start_all.sh`. It refuses to start over an old instance or
+a busy port 8787/5173 unless you confirm; `--check` only checks.
 (`--ptt` push-to-talk, `--writes` allow Claude to act in the browser, `--local` HUD with
 the local Ollama brain only, `--local --no-hud` headless and fully offline). Needs Node 20+
 and a Claude Code login for the Claude brain; `--local --no-hud` needs neither.
 
 ## Two Entry Points
 
-**`jarvis.py`** — Push-to-talk: hold Space, speak, release. Simple loop with no threading.
+**`jarvis.py`** — Push-to-talk: hold RIGHT OPTION, speak, release. Simple loop with no threading.
 
 **`daemon.py`** — Always-on background process. Activates via wake word (openWakeWord, default: "hey_jarvis") **or** double clap (within 700ms). Uses `ContinuousListener` + `ClapTrigger` running concurrently. A `JarvisState` state machine (`core/state_machine.py`) prevents overlapping activations — clap triggers are ignored while Jarvis is busy.
 
