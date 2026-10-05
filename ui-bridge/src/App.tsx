@@ -640,6 +640,7 @@ export default function App() {
       // Bare V only — ⌘V and ⌃V are paste, and swallowing those was rude.
       if (
         e.key === 'v' &&
+        !CORE_MODE &&
         !e.repeat &&
         !e.metaKey &&
         !e.ctrlKey &&
@@ -688,7 +689,7 @@ export default function App() {
       // model entirely. When "I can't hear him" is the report, this is the one
       // keypress that separates a broken voice engine from a broken voice loop
       // — and it prints the verdict rather than making you infer it.
-      if (e.key === 't' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      if (e.key === 't' && !CORE_MODE && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault()
         silence()
         const t = createSpeaker()

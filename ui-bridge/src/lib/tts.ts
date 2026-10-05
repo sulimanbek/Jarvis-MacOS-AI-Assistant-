@@ -5,6 +5,7 @@ import {
   TTS_ENGINE,
   KOKORO_VOICE,
   BRIDGE_HTTP_URL,
+  CORE_MODE,
 } from '../config'
 import * as kokoro from './kokoro'
 import { caps } from './capabilities'
@@ -335,7 +336,17 @@ type Item = {
   audio?: Promise<string | null> | null
 }
 
+const SILENT_SPEAKER: Speaker = {
+  push: () => {},
+  say: () => {},
+  end: () => Promise.resolve(),
+  cancel: () => {},
+  level: () => 0,
+}
+
 export function createSpeaker(): Speaker {
+  // Display-only mode: the Python core owns the voice. The page's voice is never switched back on.
+  if (CORE_MODE) return SILENT_SPEAKER
   const queue: Item[] = []
   let buffer = ''
   let cancelled = false

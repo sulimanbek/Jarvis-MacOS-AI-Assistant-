@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useStore, accentFor, type Phase } from '../store'
+import { CORE_MODE } from '../config'
 import { Suggestions } from './Suggestions'
 import { BladeSweep, Blades } from './Blades'
 import { Effects } from './Effects'
@@ -312,11 +313,20 @@ export function Hud() {
 
       <footer className="hud-bottom">
         <span className="hint">
-          say <b>“hey jarvis”</b> · <kbd>Space</kbd> to talk · <kbd>G</kbd> hands
-          {voice && (
+          {CORE_MODE ? (
+            // The Python core listens and speaks; this page only shows it.
             <>
-              {' · '}
-              <kbd>V</kbd> voice: {voice.replace(/\(.*?\)/g, '').trim()}
+              say <b>“hey jarvis”</b> · clap twice
+            </>
+          ) : (
+            <>
+              say <b>“hey jarvis”</b> · <kbd>Space</kbd> to talk · <kbd>G</kbd> hands
+              {voice && (
+                <>
+                  {' · '}
+                  <kbd>V</kbd> voice: {voice.replace(/\(.*?\)/g, '').trim()}
+                </>
+              )}
             </>
           )}
         </span>

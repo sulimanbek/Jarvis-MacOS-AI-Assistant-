@@ -12,6 +12,8 @@
  * these: the looping bed is music.ts's, and the oscillator pair at the bottom of
  * this file is only the fallback for when that file isn't there.
  */
+import { PAGE_SOUND } from '../config'
+
 
 type Cue = 'boot' | 'wake' | 'listen' | 'tool' | 'done' | 'error'
 
@@ -58,6 +60,7 @@ function rampTo(param: AudioParam, to: number, seconds: number) {
  * this has to be called from a click or keypress.
  */
 export async function unlockAudio(): Promise<void> {
+  if (!PAGE_SOUND) return
   const c = audio()
   if (c.state === 'suspended') {
     try {
@@ -203,6 +206,7 @@ const synth: Record<Cue, () => void> = {
 }
 
 export function play(cue: Cue) {
+  if (!PAGE_SOUND) return
   if (!ctx || ctx.state !== 'running') return
 
   const sample = samples.get(cue)
@@ -232,6 +236,7 @@ const BED = 0.05
  * layer, which is why nothing calls this today.
  */
 export function startAmbient() {
+  if (!PAGE_SOUND) return
   if (ambient || !ctx || ctx.state !== 'running') return
   const c = ctx
 

@@ -18,6 +18,8 @@
  * Everything degrades quietly: if a file is missing the cue simply doesn't
  * play, and the synthesised bed in sfx.ts covers the ambient case.
  */
+import { PAGE_SOUND } from '../config'
+
 
 type Cue = 'boot-music' | 'ambient' | 'work'
 
@@ -118,6 +120,7 @@ function track(cue: Cue): Track | null {
 
 /** Must be called from a user gesture — browsers block audio before one. */
 export function enable() {
+  if (!PAGE_SOUND) return
   enabled = true
   // Warm the files so the boot cue starts on time rather than after a buffer.
   ALL.forEach(track)
@@ -165,6 +168,7 @@ let dissolve: ReturnType<typeof setTimeout> | null = null
 
 /** The power-up swell. Plays once, then hands over to the ambient bed. */
 export function playBoot() {
+  if (!PAGE_SOUND) return
   const t = track('boot-music')
   if (!t) return
   t.el.currentTime = 0
@@ -207,6 +211,7 @@ export function playBoot() {
  * Nothing stops it. The element does not loop, so it ends when the track ends.
  */
 export function startAmbient() {
+  if (!PAGE_SOUND) return
   const t = track('ambient')
   if (!t) return
   // From the top every time, so a second power-up in the same page sounds like

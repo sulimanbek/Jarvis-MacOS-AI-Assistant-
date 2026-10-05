@@ -76,6 +76,14 @@ export const BACKEND: 'bridge' | 'direct' = choice(
 export const CORE_MODE = flag('VITE_CORE_MODE', import.meta.env.VITE_CORE_MODE, false)
 
 /**
+ * Whether the page itself makes sound: its boot music, ambient loop, sound effects and its own
+ * voice. In display-only mode the Python core does all the talking, so the page stays silent;
+ * otherwise two things would speak at once and you could not tell which was Jarvis. Set
+ * VITE_CORE_SOUND=1 to hear the page's music and effects anyway (never its voice: that is the core's).
+ */
+export const PAGE_SOUND = !CORE_MODE || flag('VITE_CORE_SOUND', import.meta.env.VITE_CORE_SOUND, false)
+
+/**
  * Where the bridge lives. Derived once here rather than in each of the three
  * places that talk to it, so moving off the default port is a single edit.
  * `wss://` maps to `https://` on its own, which is why this is a prefix swap

@@ -335,6 +335,11 @@ The old particle shell was replaced by a realistic night sky
 natural star colours, twinkle, parallax and a procedural Milky Way. In display-only mode
 (`VITE_CORE_MODE=1`) the live caption is not shown, because the log already has it.
 
+**The page is silent in display-only mode** (`VITE_CORE_MODE=1`, which the launcher uses): no boot
+music, ambient loop, sound effects or speech, because the Python core is the one talking and two
+voices at once is confusing. `VITE_CORE_SOUND=1` brings back the page's music and effects (never its
+voice). The V and T keys and the "Space to talk" hint are off in this mode too.
+
 Two effects make the display respond to what is happening:
 
 - **Voice reactivity.** The Python core streams a 0-1 microphone level (about 15 times a
