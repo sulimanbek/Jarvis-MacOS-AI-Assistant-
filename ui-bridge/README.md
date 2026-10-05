@@ -325,9 +325,11 @@ All of this lives in `bridge/server.mjs`:
 
 ## Local design changes (this fork)
 
-The interface was restyled to be minimal and blue: one glowing ring, a small status
-label and the conversation. The particle field, scanlines, corner brackets, side
-rails, footer hint, text-scramble effect and the long boot sequence are gone (the
+The interface was restyled to be minimal and blue: one glowing ring over a realistic
+night sky (`src/scene/Starfield.tsx`: ~7,600 sharp stars with a power-law brightness
+spread, natural star colours, twinkle, parallax and a procedural Milky Way), a small
+status label and the conversation. The old particle shell, scanlines, corner brackets,
+side rails, footer hint, text-scramble effect and the long boot sequence are gone (the
 start-up is now a ring drawing itself, about 2 seconds). State colours are all blues
 (`phaseColor` in `src/store.ts`), the base colour is `--interface` in `src/index.css`.
 In display-only mode (`VITE_CORE_MODE=1`) the page no longer plays its own boot music.

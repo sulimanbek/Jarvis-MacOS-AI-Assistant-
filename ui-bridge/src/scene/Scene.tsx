@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { Core } from './Core'
+import { Starfield } from './Starfield'
 import { Orbits } from './Orbits'
 import { useStore, phaseColor, accentFor, type Phase } from '../store'
 
@@ -177,6 +178,7 @@ function Rig() {
   // subject is one unbroken one.
   return (
     <>
+      <Starfield drive={drive} />
       <Core drive={drive} />
       <Orbits />
     </>
@@ -188,7 +190,7 @@ export function Scene() {
     <Canvas
       className="scene"
       camera={{ position: [0, 0, 6.2], fov: 45 }}
-      gl={{ antialias: true, alpha: true }}
+      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       dpr={[1, 2]}
     >
       <Rig />
