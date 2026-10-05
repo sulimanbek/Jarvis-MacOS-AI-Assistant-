@@ -17,7 +17,7 @@ value-taking actions, their prompt examples) from this module.
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from tools import live
+from tools import calc, live, public_info
 from tools.calendar import next_message as _calendar_next_message
 from tools.calendar import today_message as _calendar_today_message
 from tools.mail import unread_message as _mail_unread_message
@@ -262,6 +262,17 @@ SYSTEM_ACTIONS: dict[str, SystemAction] = {
         SystemAction("convert", _live(live.convert)),
         SystemAction("wiki", _live(live.wiki)),
         SystemAction("web_search", _live(live.web_search)),
+        # More public information (tools/public_info.py) and offline maths and units (tools/calc.py).
+        SystemAction("calc", _live(calc.calculate)),
+        SystemAction("units", _live(calc.convert_units)),
+        SystemAction("sun", _live(public_info.sun)),
+        SystemAction("air_quality", _live(public_info.air_quality)),
+        SystemAction("quakes", _live(public_info.quakes)),
+        SystemAction("define", _live(public_info.define)),
+        SystemAction("market", _live(public_info.market)),
+        SystemAction("sports", _live(public_info.sports)),
+        SystemAction("iss", _live(public_info.iss)),
+        SystemAction("country", _live(public_info.country)),
     ]
 }
 

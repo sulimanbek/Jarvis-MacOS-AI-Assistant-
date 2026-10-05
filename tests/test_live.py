@@ -166,9 +166,10 @@ def test_every_source_says_so_when_offline(net, fn):
     assert ok is False and msg == live.OFFLINE
 
 
-def test_timeouts_count_as_offline(net):
+def test_a_timeout_is_not_reported_as_being_offline(net):
     net.error = requests.Timeout()
-    assert live.weather_now()[1] == live.OFFLINE
+    assert live.weather_now() == (False, live.SLOW)
+    assert live.SLOW != live.OFFLINE
 
 
 def test_a_server_error_or_garbage_is_reported_not_raised(net):

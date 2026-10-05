@@ -11,7 +11,7 @@ from memory.context import (
     get_last_shortcut,
     get_last_song,
 )
-from tools import live
+from tools import calc, live, public_info
 from tools.browser import WEB_TARGETS
 
 APP_ALIASES = {
@@ -384,17 +384,27 @@ _SITE_WORDS = {"youtube", "github", "netflix", "google", "reddit", "amazon", "tw
 _PRONOUN_START = re.compile(r"^(?:the|a|an|my|your|our|this|that|it|there|he|she|they|we|you|i|going|gonna|best|worst|calling|at)\b")
 
 
-def _route_live(original: str, lowered: str) -> dict[str, str | None] | None:
+def _prepare(lowered: str) -> str | None:
+    """A phrase tidied for the live-info matchers, or None if it is clearly something else."""
     t = _strip_trailing_punctuation(lowered).replace("\u2019", "'")
     t = re.sub(r"^(?:hey |ok |okay )?(?:jarvis[,]? )?(?:please |can you |could you )?", "", t)
     if not t or _NOT_A_QUESTION.match(t) or len(t.split()) > 12:
         return None
     # "the weather app", "the news channel": a thing, not a question about the weather or news.
-    if re.search(r"\b(?:app|apps|channel|widget|icon|website|site|extension|station|podcast)$", t):
+    if re.search(r"\b(?:app|apps|channel|widget|icon|website|site|extension|podcast)$|(?<!space )\bstation$", t):
         return None
+    return t
 
-    def act(action: str, value: str | None = None) -> dict[str, str | None]:
-        return {"tool": "system", "action": action, **({"value": value} if value else {})}
+
+def _act(action: str, value: str | None = None) -> dict[str, str | None]:
+    return {"tool": "system", "action": action, **({"value": value} if value else {})}
+
+
+def _route_live(original: str, lowered: str) -> dict[str, str | None] | None:
+    t = _prepare(lowered)
+    if t is None:
+        return None
+    act = _act
 
     # Time and date. No internet needed for your own clock.
     m = re.fullmatch(r"(?:what(?:'s| is)? the |what time is it|tell me the )(?:current )?(?:time)?(?: right now| now)?" + _CITY + _TAIL, t) \
@@ -448,6 +458,118 @@ def _route_live(original: str, lowered: str) -> dict[str, str | None] | None:
         if (topic and len(topic.split()) <= 5 and not _PRONOUN_START.match(topic)
                 and topic not in ("you", "me", "yourself", "weather", "news", "time", "date", "day")):
             return act("wiki", topic)
+    return None
+
+
+# ── More public information: maths, units, sun, air, quakes, words, markets, sports, ISS, countries ──
+
+_ASSET_ALT = {
+    kind: "|".join(sorted(map(re.escape, (k for k, v in public_info.ASSETS.items() if v[3] == kind)), key=len, reverse=True))
+    for kind in ("company", "market")
+}
+_LEAGUE_ALT = "|".join(sorted(map(re.escape, public_info.LEAGUES), key=len, reverse=True))
+_TEAM_ALT = "|".join(sorted(map(re.escape, public_info.TEAMS), key=len, reverse=True))
+_COUNTRY_ALT = "|".join(map(re.escape, public_info.COUNTRY_LIST))
+# Single-letter unit symbols are too easy to mishear or mean something else; spoken words only.
+_UNIT_ALT = "|".join(re.escape(w) for w in calc.unit_words() if len(w) > 1 and w.isascii() and w not in ("in", "min", "st"))
+_NOT_WORDS = {"this", "that", "it", "he", "she", "they", "you", "i", "we", "these", "those", "there", "life"}
+_MATH_ALLOWED = re.compile(
+    r"(?:[\d.,()+\-*/^%x×÷]|\bplus\b|\bminus\b|\btimes\b|\bmultiplied by\b|\bdivided by\b|\bover\b|\bto the power of\b|"
+    r"\bsquared\b|\bcubed\b|\bpercent of\b|\bpercent\b|\bof\b|\bsquare root of\b|\bmod\b|\s)+"
+)
+_MATH_HAS_OPERATOR = re.compile(r"[+*/^%×÷]|\d\s*x\s*\d|\d\s*-\s*\d|\b(?:plus|minus|times|multiplied by|divided by|over|to the power of|squared|cubed|percent|mod|square root of)\b")
+
+
+def _route_info(original: str, lowered: str) -> dict[str, str | None] | None:
+    t = _prepare(lowered)
+    if t is None:
+        return None
+    t = t.replace("°", " ")
+    act = _act
+
+    # Maths: only a plain arithmetic sentence, so ordinary talk with a number in it isn't caught.
+    m = re.fullmatch(r"(?:(?:what(?:'s| is)|whats|how much is|calculate|compute|work out|figure out) )?(?P<e>.+)", t)
+    if m:
+        e = m.group("e").strip()
+        if (_MATH_ALLOWED.fullmatch(e) and _MATH_HAS_OPERATOR.search(e) and re.search(r"\d", e)
+                and (m.group(0) != e or re.search(r"\d.*\d|square root", e))):
+            return act("calc", e)
+
+    # Unit conversion (currency was tried first, so "100 dollars in euros" never gets here).
+    amount = r"(?P<amt>-?\d[\d,]*\.?\d*|a|an|one)?"
+    m = (re.fullmatch(r"(?:how much is|what(?:'s| is)|convert) " + amount + r" ?(?P<src>" + _UNIT_ALT + r") (?:in|to|into) (?P<dst>" + _UNIT_ALT + r")", t)
+         or re.fullmatch(r"how (?:many|much) (?P<dst>" + _UNIT_ALT + r") (?:are |is )?(?:there )?in (?:a |an |one )?(?P<amt>\d[\d,]*\.?\d*)? ?(?P<src>" + _UNIT_ALT + r")", t)
+         or re.fullmatch(r"(?P<amt>-?\d[\d,]*\.?\d*) ?(?P<src>" + _UNIT_ALT + r") (?:in|to|into) (?P<dst>" + _UNIT_ALT + r")", t))
+    if m:
+        amt = (m.group("amt") or "1").replace(",", "")
+        amt = "1" if amt in ("a", "an", "one") else amt
+        return act("units", f"{amt} {m.group('src')} to {m.group('dst')}")
+
+    # Sunrise and sunset.
+    city = r"(?: in (?P<city>[a-z][a-z .'-]{1,40}?))?"
+    day = r"(?: (?:today|tomorrow|tonight))?"
+    m = (re.fullmatch(r"(?:what time is|what time's|when is|when's|what time does|when does)(?: the)? (?P<k>sunrise|sunset|sun rise|sun set|sun rises|sun sets|sun go down|sun come up)" + day + city + day, t)
+         or re.fullmatch(r"(?P<k>sunrise and sunset|sunrise|sunset)(?: times?)?" + day + city + day, t))
+    if m:
+        k = m.group("k")
+        kind = "both" if "and" in k else "sunrise" if ("rise" in k or "come up" in k) else "sunset"
+        return act("sun", f"{kind}|{'tomorrow' if 'tomorrow' in t else 'today'}|{(m.group('city') or '').strip()}")
+
+    # Air quality.
+    m = (re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?:air quality|aqi|air pollution)(?: index)?(?: like)?" + _TAIL + city + _TAIL, t)
+         or re.fullmatch(r"how(?:'s| is) the air(?: quality)?" + _TAIL + city + _TAIL, t)
+         or re.fullmatch(r"is the air (?:quality )?(?:good|bad|safe|clean|ok|okay|healthy)" + _TAIL + city + _TAIL, t))
+    if m:
+        return act("air_quality", (m.group("city") or "").strip() or None)
+
+    # Earthquakes.
+    if re.fullmatch(r"(?:(?:were|are|is) there |what(?:'s| is) )?(?:any |the )?(?:recent |latest |big |major |new |biggest |strongest )*earthquakes?(?: today| recently| lately| in the last day| right now| now)?", t):
+        return act("quakes")
+
+    # Dictionary: one word.
+    m = (re.fullmatch(r"(?:define|definition of|meaning of|what(?:'s| is) the (?:definition|meaning) of) (?:the word )?(?P<w>[a-z'-]+)", t)
+         or re.fullmatch(r"what does (?:the word )?(?P<w>[a-z'-]+) mean", t))
+    if m and m.group("w") not in _NOT_WORDS:
+        return act("define", m.group("w"))
+
+    # Markets. Company names need a "stock" or "share" word so "apple" the fruit is left alone.
+    m = (re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?:current |latest )?(?:stock |share )?price (?:of|for) (?:the )?(?P<n>" + _ASSET_ALT["company"] + r")(?: stock| shares)" + _TAIL, t)
+         or re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?P<n>" + _ASSET_ALT["company"] + r")(?: stock| share| shares)(?: price)?" + _TAIL, t)
+         or re.fullmatch(r"how(?:'s| is) (?:the )?(?P<n>" + _ASSET_ALT["company"] + r") (?:stock|shares) (?:doing|trading|performing)" + _TAIL, t)
+         or re.fullmatch(r"how(?:'s| is) (?:the )?(?P<n>" + _ASSET_ALT["company"] + r") trading" + _TAIL, t)
+         or re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?:current |latest )?(?:price (?:of|for)|how much is) (?:an? (?:ounce|barrel|pound) of )?(?:the )?(?P<n>" + _ASSET_ALT["market"] + r")" + _TAIL, t)
+         or re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?P<n>" + _ASSET_ALT["market"] + r") price" + _TAIL, t)
+         or re.fullmatch(r"(?:how(?:'s| is| are)|where(?:'s| is| are)) (?:the )?(?P<n>" + _ASSET_ALT["market"] + r")(?: doing| trading| today| now)*", t))
+    if m:
+        return act("market", m.group("n"))
+
+    # Sports.
+    when = r"(?: today| tonight| now| yesterday| last night)*"
+    m = (re.fullmatch(r"(?:what(?:'s| are) )?(?:the )?(?:latest |live |today'?s )?(?P<l>" + _LEAGUE_ALT + r") (?:scores?|results?|games?|matches|fixtures?)" + when, t)
+         or re.fullmatch(r"(?:what(?:'s| are) )?(?:the )?(?:latest )?scores? (?:in|for|of) (?:the )?(?P<l>" + _LEAGUE_ALT + r")" + when, t))
+    team = (re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?P<t>" + _TEAM_ALT + r") (?:score|game|result|match)" + when, t)
+            or re.fullmatch(r"(?:how did|did) (?:the )?(?P<t>" + _TEAM_ALT + r") (?:do|win|play|lose)(?: (?:the )?(?:game|match))?" + when, t))
+    found = m or team
+    if found:
+        key = found.group("l") if m else found.group("t")
+        suffix = "|yesterday" if re.search(r"yesterday|last night", t) else ""
+        return act("sports", key + suffix)
+    if re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?:latest |live )?(?:sports )?scores?" + when, t):
+        return act("sports")
+
+    # The space station.
+    if re.fullmatch(r"where(?:'s| is) the (?:iss|international space station|space station)" + _TAIL, t):
+        return act("iss")
+
+    # Countries: capital, population, economy.
+    c = r"(?:the )?(?P<c>" + _COUNTRY_ALT + r")"
+    m = (re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?P<w>capital)(?: city)? of " + c, t)
+         or re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?P<w>population) of " + c, t)
+         or re.fullmatch(r"how many people (?:live|are) in " + c, t)
+         or re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?P<w>gdp) of " + c, t))
+    if m:
+        what = (m.groupdict().get("w") or "population")
+        return act("country", f"{what}|{m.group('c')}")
     return None
 
 
@@ -516,6 +638,10 @@ def _route_fast(original: str, lowered: str) -> dict[str, str | None] | None:
     live_decision = _route_live(original, lowered)
     if live_decision:
         return live_decision
+
+    info_decision = _route_info(original, lowered)
+    if info_decision:
+        return info_decision
 
     reminder_text = _extract_reminder_text(original, lowered)
     if reminder_text:

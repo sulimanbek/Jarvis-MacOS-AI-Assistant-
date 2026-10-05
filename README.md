@@ -55,6 +55,12 @@ The **HUD** (`ui-bridge/`) is a silent, blue React + Three.js interface (a glowi
 | "what's the news", "latest news about SpaceX" | live headlines |
 | "what time is it", "what time is it in Tokyo", "what's the date" | clock and world time |
 | "price of bitcoin", "how much is 100 dollars in dirhams" | crypto prices, currency conversion |
+| "apple stock", "price of gold", "how's the stock market", "how much is oil" | stocks, indices, gold, oil |
+| "premier league scores", "did the Lakers win", "NBA scores yesterday" | sports scores (football, NBA, NFL, MLB, NHL) |
+| "what's 15% of 240", "23 times 47", "square root of 144" | maths (worked out on your Mac, offline) |
+| "how many kilometers in 5 miles", "72 fahrenheit in celsius" | unit conversion (offline) |
+| "when is sunset", "what's the air quality", "any earthquakes today" | sun times, air quality, earthquakes |
+| "define ephemeral", "capital of Japan", "population of India", "where is the ISS" | dictionary, countries, the space station |
 | "who is Elon Musk", "tell me about the Roman Empire" | Wikipedia summaries |
 | "search the web for...", "google...", "look up..." | Claude's live web search (or Wikipedia + news without Claude) |
 | "volume up", "battery", "mute", "lock my screen" | system |
@@ -70,8 +76,10 @@ limit).
 
 ## Live information
 
-Weather, news, the time, prices and facts are answered **straight from free public sources**
-(Open-Meteo, Google News, Wikipedia, CoinGecko, open.er-api.com), with no account or API key.
+Weather, news, the time, prices, scores and facts are answered **straight from free public sources**
+(Open-Meteo, Google News, Wikipedia and Wiktionary, CoinGecko, open.er-api.com, Yahoo Finance's public
+price service, ESPN's public scoreboards, USGS, the World Bank, wheretheiss.at), with no account or API
+key. Maths and unit conversion need no internet at all.
 They take about a second, cost nothing, don't need Claude, and can't be made up the way a
 language model's memory can. Anything else live (sports scores, stocks, "who won last night",
 flights) goes to Claude, which searches the web (10 to 20 seconds); without Claude, Jarvis says
@@ -84,7 +92,13 @@ it can't rather than guessing.
   Jarvis says "I can't reach the internet right now". Your clock and date work offline.
 - Without Claude, "search the web for X" checks Wikipedia and the news. It says so when that finds
   nothing relevant instead of passing off loosely related headlines.
-- Currency conversion uses daily rates, and crypto only covers the main coins.
+- Currency conversion uses daily rates, and crypto only covers the main coins. Stock prices cover about
+  50 big companies plus the main indices, gold, silver, oil and copper; scores cover the major football
+  leagues, NBA, NFL, MLB and NHL, and recognise famous team names. Prices may be delayed, so don't trade
+  on them. Stocks and scores come from public but *unofficial* services that can change without notice;
+  if one breaks, Jarvis says it couldn't get that and Claude's web search still covers it.
+- Not covered by a free source: flights, traffic, parcels, public holidays (no data for the UAE), and
+  anything personal. With Claude running those go to its web search.
 
 ## Talking back and forth
 

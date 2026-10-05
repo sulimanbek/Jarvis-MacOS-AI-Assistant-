@@ -35,19 +35,28 @@ MAX_BYTES = 3_000_000
 
 OFFLINE = "I can't reach the internet right now."
 UNAVAILABLE = "I couldn't get that right now."
+SLOW = "That source is taking too long, so I gave up."
 
 
 class SourceError(Exception):
     """A source couldn't be reached or answered badly. The message is speakable."""
 
 
+class NotFoundError(SourceError):
+    """The source answered, and says there is no such thing (HTTP 404)."""
+
+
 def _get(url: str, params: dict | None = None) -> requests.Response:
     try:
         response = requests.get(url, params=params, headers=HEADERS, timeout=LIVE_TIMEOUT)
-    except (requests.ConnectionError, requests.Timeout) as e:
+    except requests.Timeout as e:
+        raise SourceError(SLOW) from e
+    except requests.ConnectionError as e:
         raise SourceError(OFFLINE) from e
     except requests.RequestException as e:
         raise SourceError(UNAVAILABLE) from e
+    if response.status_code == 404:
+        raise NotFoundError(UNAVAILABLE)
     if response.status_code != 200 or len(response.content) > MAX_BYTES:
         raise SourceError(UNAVAILABLE)
     return response

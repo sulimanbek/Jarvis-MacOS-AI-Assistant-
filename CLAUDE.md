@@ -103,6 +103,19 @@ available, else `web_search` (Wikipedia if the title overlaps, else headlines th
 honest "found nothing"). Default city is from the Mac's time zone (`HOME_CITY` overrides); `live.warm()`
 looks it up at startup. Tests fake `requests.get`; nothing in the suite touches the network.
 
+### More public information (tools/public_info.py, tools/calc.py, router._route_info)
+Same shape as `tools/live.py` (it reuses `_json`/`_get`/`SourceError`, plus `NotFoundError` for a 404):
+sun times and air quality (Open-Meteo), earthquakes (USGS), definitions (Wiktionary, dictionaryapi.dev as a
+backup only if Wiktionary is failing; a Wiktionary 404 stops there), markets (Yahoo's public chart service,
+unofficial: ~50 named companies that need a "stock/share" word, plus indices/gold/oil that don't), sports
+(ESPN scoreboards, unofficial; "yesterday" is measured on US Eastern time, ESPN's clock; `TEAMS` maps famous
+teams to leagues so "arsenal score" is understood without guessing nouns), the ISS, and World Bank country
+facts (gated by the static `COUNTRY_LIST` so "capital of Texas" isn't hijacked). Values are pipe-delimited
+strings ("sunset|tomorrow|london", "capital|japan", "nba|yesterday"). `tools/calc.py` is fully offline: maths
+walks a parsed syntax tree with a whitelist after a character whitelist (nothing is ever executed), caps
+exponents, and refuses anything else; units use a factor table plus special temperature handling. Router
+order matters: currency before units before maths; every matcher is an anchored full match behind `_prepare`.
+
 ### Conversation (daemon._follow_up, audio/utterance.py)
 After each command the daemon calls `_follow_up`: `tts.wait_until_quiet(settle=...)` (speak() is async,
 so a pending-speech counter says when Jarvis has actually finished), then
