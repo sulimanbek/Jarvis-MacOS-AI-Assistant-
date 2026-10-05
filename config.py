@@ -38,6 +38,16 @@ OLLAMA_RETRY_BACKOFF_SECONDS = 0.75
 SUBPROCESS_TIMEOUT = 12
 
 
+# ---------- LIVE DATA ----------
+# Weather, news, time, prices and facts come straight from free public sources, so they are
+# fast and current, and work without Claude. Questions go to those sources (and only the
+# question: the place, topic or coin).
+HOME_CITY = os.environ.get("JARVIS_CITY", "").strip()   # blank = taken from your Mac's time zone
+TEMP_UNIT = os.environ.get("JARVIS_UNITS", "celsius").strip().lower()   # "celsius" or "fahrenheit"
+NEWS_COUNTRY = os.environ.get("JARVIS_NEWS_COUNTRY", "US").strip().upper()   # edition: US, GB, AE, IN ...
+LIVE_TIMEOUT = 8                                         # seconds before giving up on a source
+
+
 # ---------- CONVERSATION ----------
 # After Jarvis answers, keep listening for a reply without needing "hey jarvis" again.
 # It goes back to waiting for the wake word after FOLLOWUP_SECONDS of quiet, or when you say

@@ -12,6 +12,7 @@ Stop:  say wake word → "goodbye", or Ctrl+C
 import os
 import re
 import shutil
+from threading import Thread
 
 from dotenv import load_dotenv
 
@@ -39,6 +40,7 @@ from core.stt.whisper_cpp import transcribe
 from memory.context import add_message
 from security.policy import requires_confirmation as _policy_requires_confirmation
 from services.ollama_service import ensure_ollama_running, is_ollama_running
+from tools import live
 from utils.logger import save_action
 
 EXIT_COMMANDS = {"exit", "quit", "stop", "goodbye", "bye", "shut down", "shutdown"}
@@ -240,6 +242,9 @@ def main():
         print("✅ Ollama running.")
     else:
         print("⚠️  Ollama could not start. Non-LLM commands will still work.")
+
+    # Look up the home city now, in the background, so the first weather question isn't slow.
+    Thread(target=live.warm, daemon=True).start()
 
     state    = JarvisState()
     levels   = LevelStreamer()

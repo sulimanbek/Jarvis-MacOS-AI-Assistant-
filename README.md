@@ -51,6 +51,12 @@ The **HUD** (`ui-bridge/`) is a blue React + Three.js interface (a glowing react
 | "what's on my calendar", "when's my next meeting" | reads Calendar (read-only) |
 | "check my email", "any unread mail" | unread count and newest senders (read-only, never sends) |
 | "run the shortcut playlist", "what shortcuts do I have" | Shortcuts (asks for a spoken yes first) |
+| "what's the weather", "weather in London", "will it rain tomorrow" | live weather and forecast |
+| "what's the news", "latest news about SpaceX" | live headlines |
+| "what time is it", "what time is it in Tokyo", "what's the date" | clock and world time |
+| "price of bitcoin", "how much is 100 dollars in dirhams" | crypto prices, currency conversion |
+| "who is Elon Musk", "tell me about the Roman Empire" | Wikipedia summaries |
+| "search the web for...", "google...", "look up..." | Claude's live web search (or Wikipedia + news without Claude) |
 | "volume up", "battery", "mute", "lock my screen" | system |
 | "remind me to…", "take a note…" | Reminders, Notes |
 | "open Safari", "go to YouTube" | apps and websites |
@@ -61,6 +67,24 @@ not allowed to read them either. The first time, macOS asks whether the app that
 launched Jarvis may control Calendar or Mail: allow it under System Settings, Privacy
 & Security, Automation. Repeating events show only on their first day (an AppleScript
 limit).
+
+## Live information
+
+Weather, news, the time, prices and facts are answered **straight from free public sources**
+(Open-Meteo, Google News, Wikipedia, CoinGecko, open.er-api.com), with no account or API key.
+They take about a second, cost nothing, don't need Claude, and can't be made up the way a
+language model's memory can. Anything else live (sports scores, stocks, "who won last night",
+flights) goes to Claude, which searches the web (10 to 20 seconds); without Claude, Jarvis says
+it can't rather than guessing.
+
+- **Your city** is taken from your Mac's time zone. Change it with `JARVIS_CITY=London`, units with
+  `JARVIS_UNITS=fahrenheit`, and the news edition with `JARVIS_NEWS_COUNTRY=AE` (US, GB, AE, IN...).
+- **Privacy:** only what you asked (the place, topic, coin or currency) is sent to the source, never
+  audio or anything else. The sources see your IP address, as any website would. Without internet
+  Jarvis says "I can't reach the internet right now". Your clock and date work offline.
+- Without Claude, "search the web for X" checks Wikipedia and the news. It says so when that finds
+  nothing relevant instead of passing off loosely related headlines.
+- Currency conversion uses daily rates, and crypto only covers the main coins.
 
 ## Talking back and forth
 
@@ -163,6 +187,7 @@ Everything is in `config.py`.
 | `CLAP_ENERGY_THRESHOLD`, `CLAP_MAX_GAP_MS` | Double-clap tuning |
 | `AGENT_MAX_STEPS` | Cap on multi-step plans (default 5) |
 | `FOLLOWUP_ENABLED`, `FOLLOWUP_SECONDS`, `FOLLOWUP_ONSET_ENERGY` | Reply without the wake word, and how long and how loud |
+| `HOME_CITY`, `TEMP_UNIT`, `NEWS_COUNTRY` | Live data: default city, units, news edition |
 
 Bridge settings (model, effort, extra MCP servers, write mode) are environment variables; see `ui-bridge/README.md`. To cut Claude usage, set `JARVIS_MODEL` to a smaller model and lower `JARVIS_EFFORT`.
 

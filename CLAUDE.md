@@ -90,6 +90,19 @@ verb is left alone). Calendar, mail, clipboard and screenshot are in
 Shortcuts: `tools/shortcuts.match_shortcut` maps a spoken sentence to an installed shortcut name;
 the Shortcuts app only runs an exact name.
 
+### Live data (tools/live.py, router._route_live)
+Weather, forecast, news, time/date, crypto price, currency, Wikipedia and a basic search are answered by
+`tools/live.py` from keyless public APIs (Open-Meteo, Google News RSS, Wikipedia, CoinGecko,
+open.er-api.com), registered as `SYSTEM_ACTIONS` (`weather`, `weather_tomorrow`, `news`, `time_now`,
+`date_today`, `price`, `convert`, `wiki`, `web_search`) with optional values. `router._route_live` matches
+anchored phrases and skips anything that starts like a command or ends in "app/channel/..."; coins are a
+named list (a free-text price search would return random tokens). Everything returns `(ok, message)`
+and never raises; offline gives "I can't reach the internet right now". News XML is parsed with
+`defusedxml`. General searches ("search the web for X", `_extract_web_search`) go to Claude's WebSearch when
+available, else `web_search` (Wikipedia if the title overlaps, else headlines that actually match, else an
+honest "found nothing"). Default city is from the Mac's time zone (`HOME_CITY` overrides); `live.warm()`
+looks it up at startup. Tests fake `requests.get`; nothing in the suite touches the network.
+
 ### Conversation (daemon._follow_up, audio/utterance.py)
 After each command the daemon calls `_follow_up`: `tts.wait_until_quiet(settle=...)` (speak() is async,
 so a pending-speech counter says when Jarvis has actually finished), then

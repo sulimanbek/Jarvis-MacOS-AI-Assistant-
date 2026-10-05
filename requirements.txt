@@ -7,3 +7,4 @@ pynput
 openwakeword
 onnxruntime
 websockets
+defusedxml

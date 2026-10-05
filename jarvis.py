@@ -1,6 +1,7 @@
 import atexit
 import os
 import shutil
+from threading import Thread
 
 from dotenv import load_dotenv
 
@@ -18,6 +19,7 @@ from core.stt.whisper_cpp import transcribe
 from memory.context import add_message
 from security.policy import requires_confirmation as _policy_requires_confirmation
 from services.ollama_service import ensure_ollama_running, is_ollama_running
+from tools import live
 from utils.logger import save_action
 
 EXIT_COMMANDS = {"exit", "quit", "stop", "goodbye", "bye"}
@@ -108,6 +110,9 @@ def main():
 
     # Lets Claude's mac_action requests ask you for a spoken yes before they run.
     set_confirmer(_confirm_action)
+
+    # Look up the home city now, in the background, so the first weather question isn't slow.
+    Thread(target=live.warm, daemon=True).start()
 
     # Your voice level for the HUD (a single number, never audio).
     levels = LevelStreamer()

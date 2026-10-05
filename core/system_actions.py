@@ -17,6 +17,7 @@ value-taking actions, their prompt examples) from this module.
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from tools import live
 from tools.calendar import next_message as _calendar_next_message
 from tools.calendar import today_message as _calendar_today_message
 from tools.mail import unread_message as _mail_unread_message
@@ -207,6 +208,14 @@ def _mail_unread(_value: str | None = None) -> tuple[bool, str, dict]:
     return ok, message, {}
 
 
+def _live(fn):
+    """Wrap a tools.live function (value -> (ok, message)) as a registry handler."""
+    def handler(value: str | None = None) -> tuple[bool, str, dict]:
+        ok, message = fn(value)
+        return ok, message, {}
+    return handler
+
+
 def _shortcuts_list(_value: str | None = None) -> tuple[bool, str, dict]:
     names = list_shortcuts()
     if not names:
@@ -243,6 +252,16 @@ SYSTEM_ACTIONS: dict[str, SystemAction] = {
         SystemAction("calendar_next", _calendar_next),
         SystemAction("mail_unread", _mail_unread),
         SystemAction("shortcuts_list", _shortcuts_list),
+        # Live data (tools/live.py): the value is optional (a city, topic, coin or "100 usd to eur").
+        SystemAction("weather", _live(live.weather_now)),
+        SystemAction("weather_tomorrow", _live(live.weather_tomorrow)),
+        SystemAction("news", _live(live.news)),
+        SystemAction("time_now", _live(live.time_now)),
+        SystemAction("date_today", _live(live.date_today)),
+        SystemAction("price", _live(live.price)),
+        SystemAction("convert", _live(live.convert)),
+        SystemAction("wiki", _live(live.wiki)),
+        SystemAction("web_search", _live(live.web_search)),
     ]
 }
 

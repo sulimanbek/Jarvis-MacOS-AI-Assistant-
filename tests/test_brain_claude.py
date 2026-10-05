@@ -49,14 +49,14 @@ def test_router_uses_claude_for_non_fast_path_requests(monkeypatch):
     monkeypatch.setattr(router, "BRAIN_MODE", "claude")
     monkeypatch.setattr(router, "think_claude", lambda t: {"tool": None, "response": "Claude says hi", "_source": "claude"})
     monkeypatch.setattr(router, "think_local", lambda t: (_ for _ in ()).throw(AssertionError("local used")))
-    assert router.route("tell me about black holes")["response"] == "Claude says hi"
+    assert router.route("how do magnets work")["response"] == "Claude says hi"
 
 
 def test_router_falls_back_to_local_when_claude_returns_none(monkeypatch):
     monkeypatch.setattr(router, "BRAIN_MODE", "claude")
     monkeypatch.setattr(router, "think_claude", lambda t: None)
     monkeypatch.setattr(router, "think_local", lambda t: {"tool": None, "response": "local answer"})
-    assert router.route("tell me about black holes")["response"] == "local answer"
+    assert router.route("how do magnets work")["response"] == "local answer"
 
 
 def test_fast_path_never_reaches_claude(monkeypatch):
@@ -75,4 +75,4 @@ def test_local_mode_never_contacts_claude(monkeypatch):
     monkeypatch.setattr(router, "BRAIN_MODE", "local")
     monkeypatch.setattr(router, "think_claude", lambda t: (_ for _ in ()).throw(AssertionError("claude used")))
     monkeypatch.setattr(router, "think_local", lambda t: {"tool": None, "response": "offline"})
-    assert router.route("tell me about black holes")["response"] == "offline"
+    assert router.route("how do magnets work")["response"] == "offline"

@@ -11,6 +11,7 @@ from memory.context import (
     get_last_shortcut,
     get_last_song,
 )
+from tools import live
 from tools.browser import WEB_TARGETS
 
 APP_ALIASES = {
@@ -353,6 +354,119 @@ def _route_apps(lowered: str) -> dict[str, str | None] | None:
     return None
 
 
+# ── Live data: weather, news, time, prices, facts ───────────────────────────
+
+# A phrase that starts like this is about something else ("open the weather app").
+_NOT_A_QUESTION = re.compile(
+    r"^(?:open|launch|start|play|close|quit|go to|set|add|create|remind|note|turn|text|send|write|"
+    r"install|download|search|google|look up|take|make|schedule|cancel|delete)\b"
+)
+_TAIL = r"(?: (?:right now|now|today|tonight|tomorrow|outside|currently|please))*"
+_CITY = r"(?: in (?P<city>[a-z][a-z .'-]{1,40}?))?"
+
+_CURRENCIES = {
+    "us dollars": "USD", "us dollar": "USD", "american dollars": "USD", "dollars": "USD", "dollar": "USD", "usd": "USD", "bucks": "USD",
+    "euros": "EUR", "euro": "EUR", "eur": "EUR",
+    "british pounds": "GBP", "pounds sterling": "GBP", "pounds": "GBP", "pound": "GBP", "gbp": "GBP",
+    "dirhams": "AED", "dirham": "AED", "aed": "AED", "emirati dirhams": "AED", "uae dirhams": "AED",
+    "saudi riyals": "SAR", "riyals": "SAR", "riyal": "SAR", "sar": "SAR",
+    "yen": "JPY", "jpy": "JPY", "rupees": "INR", "rupee": "INR", "indian rupees": "INR", "inr": "INR",
+    "canadian dollars": "CAD", "cad": "CAD", "australian dollars": "AUD", "aud": "AUD",
+    "swiss francs": "CHF", "francs": "CHF", "chf": "CHF", "yuan": "CNY", "cny": "CNY", "renminbi": "CNY",
+    "turkish lira": "TRY", "lira": "TRY", "kuwaiti dinars": "KWD", "dinars": "KWD", "kwd": "KWD",
+    "egyptian pounds": "EGP", "egp": "EGP", "qatari riyals": "QAR", "qar": "QAR",
+    "pakistani rupees": "PKR", "pkr": "PKR", "rubles": "RUB", "rand": "ZAR",
+    "singapore dollars": "SGD", "sgd": "SGD", "pesos": "MXN", "won": "KRW",
+}
+_CUR = "|".join(sorted(map(re.escape, _CURRENCIES), key=len, reverse=True))
+_COIN = "|".join(sorted(map(re.escape, live.COINS), key=len, reverse=True))
+_SITE_WORDS = {"youtube", "github", "netflix", "google", "reddit", "amazon", "twitter", "linkedin", "spotify", "wikipedia"}
+_PRONOUN_START = re.compile(r"^(?:the|a|an|my|your|our|this|that|it|there|he|she|they|we|you|i|going|gonna|best|worst|calling|at)\b")
+
+
+def _route_live(original: str, lowered: str) -> dict[str, str | None] | None:
+    t = _strip_trailing_punctuation(lowered).replace("\u2019", "'")
+    t = re.sub(r"^(?:hey |ok |okay )?(?:jarvis[,]? )?(?:please |can you |could you )?", "", t)
+    if not t or _NOT_A_QUESTION.match(t) or len(t.split()) > 12:
+        return None
+    # "the weather app", "the news channel": a thing, not a question about the weather or news.
+    if re.search(r"\b(?:app|apps|channel|widget|icon|website|site|extension|station|podcast)$", t):
+        return None
+
+    def act(action: str, value: str | None = None) -> dict[str, str | None]:
+        return {"tool": "system", "action": action, **({"value": value} if value else {})}
+
+    # Time and date. No internet needed for your own clock.
+    m = re.fullmatch(r"(?:what(?:'s| is)? the |what time is it|tell me the )(?:current )?(?:time)?(?: right now| now)?" + _CITY + _TAIL, t) \
+        if re.match(r"(?:what time is it|what(?:'s| is)? the (?:current )?time|tell me the time)", t) else None
+    if m:
+        return act("time_now", (m.group("city") or "").strip() or None)
+    if re.fullmatch(r"what(?:'s| is)(?: the| today'?s)? (?:date|day)(?: (?:it is|is it))?(?: today)?|what day is it(?: today)?|what(?:'s| is) today'?s date", t):
+        return act("date_today")
+
+    # Weather and forecast.
+    if re.search(r"\b(?:weather|forecast|temperature)\b|\bhow (?:hot|cold|warm) is it\b|\b(?:is it|will it)(?: going to| gonna)? (?:rain|snow)\b|\bis it raining\b", t):
+        city = re.search(r" in (?P<city>[a-z][a-z .'-]{1,40}?)" + _TAIL + "$", t)
+        place = (city.group("city").strip() if city else None) or None
+        return act("weather_tomorrow" if "tomorrow" in t else "weather", place)
+
+    # News.
+    m = re.fullmatch(r"(?:(?:what(?:'s| is)|tell me|give me|read me|read|get me|show me)(?: me)?(?: the)? )?(?:the )?(?:latest |top |today'?s |breaking |current )*(?:news|headlines)"
+                     r"(?: (?:today|now|right now))?(?: (?:about|on|for|regarding) (?P<topic>.+))?", t) \
+        or re.fullmatch(r"what(?:'s| is) (?:going on|happening) in the world(?: today| right now)?|what(?:'s| is) in the news", t)
+    if m:
+        topic = (m.groupdict().get("topic") or "").strip()
+        return act("news", topic or None)
+
+    # Crypto prices (a named list only).
+    m = (re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?:current )?price (?:of|for) (?P<c>" + _COIN + r")" + _TAIL, t)
+         or re.fullmatch(r"how much is (?:a |one |1 )?(?P<c>" + _COIN + r")(?: worth| coin)?" + _TAIL, t)
+         or re.fullmatch(r"(?:what(?:'s| is) )?(?:the )?(?P<c>" + _COIN + r")(?: coin)? (?:price|rate)" + _TAIL, t)
+         or re.fullmatch(r"what(?:'s| is) (?P<c>" + _COIN + r") (?:at|trading at|worth)" + _TAIL, t))
+    if m:
+        return act("price", m.group("c"))
+
+    # Currency.
+    amount = r"(?P<amt>\d[\d,]*\.?\d*|a|one|an)?"
+    m = (re.fullmatch(r"(?:how much is|what(?:'s| is)|convert) " + amount + r" ?(?P<src>" + _CUR + r") (?:in|to|into) (?P<dst>" + _CUR + r")" + _TAIL, t)
+         or re.fullmatch(r"(?:the )?(?:exchange rate|rate)(?: (?:from|of))? " + amount + r" ?(?P<src>" + _CUR + r") (?:to|in|into|against) (?P<dst>" + _CUR + r")" + _TAIL, t)
+         # "100 dollars in dirhams": with no lead-in, an actual amount is required so ordinary talk isn't caught
+         or re.fullmatch(r"(?P<amt>\d[\d,]*\.?\d*|a|one|an) ?(?P<src>" + _CUR + r") (?:in|to|into) (?P<dst>" + _CUR + r")" + _TAIL, t))
+    if m:
+        amt = (m.group("amt") or "1").replace(",", "")
+        amt = "1" if amt in ("a", "an", "one") else amt
+        return act("convert", f"{amt} {_CURRENCIES[m.group('src')]} to {_CURRENCIES[m.group('dst')]}")
+
+    # Facts about a person or thing.
+    m = re.fullmatch(r"(?P<lead>who (?:is|was)|tell me about|wikipedia) (?P<topic>.+)", t)
+    if m:
+        topic = m.group("topic").strip()
+        # "who is the president" needs live information (Claude), but "tell me about the Roman
+        # Empire" is an encyclopedia question; "the weather" and "the news" were handled above.
+        if m.group("lead") == "tell me about" and topic.startswith("the "):
+            topic = topic[4:]
+        if (topic and len(topic.split()) <= 5 and not _PRONOUN_START.match(topic)
+                and topic not in ("you", "me", "yourself", "weather", "news", "time", "date", "day")):
+            return act("wiki", topic)
+    return None
+
+
+def _extract_web_search(lowered: str) -> str | None:
+    """The query from "search the web for X", "google X", "look up X"; None if it names a site."""
+    t = _strip_trailing_punctuation(lowered).replace("\u2019", "'")
+    t = re.sub(r"^(?:hey |ok |okay )?(?:jarvis[,]? )?(?:please |can you |could you )?", "", t)
+    m = (re.fullmatch(r"(?:web search|search (?:the )?(?:web|internet|online|google))(?: for| about)? (?P<q>.+)", t)
+         or re.fullmatch(r"search for (?P<q>.+)", t)
+         or re.fullmatch(r"(?:google|look up|lookup) (?P<q>.+)", t))
+    if not m:
+        return None
+    query = m.group("q").strip()
+    site = re.search(r" on (?P<s>[a-z]+)$", query)
+    if not query or (site and site.group("s") in _SITE_WORDS) or query in _SITE_WORDS:
+        return None
+    return query
+
+
 def _extract_reminder_text(original: str, lowered: str) -> str | None:
     patterns = [
         r"^remind me to\s+(.+)$",
@@ -398,6 +512,10 @@ def _route_fast(original: str, lowered: str) -> dict[str, str | None] | None:
     apps_decision = _route_apps(lowered)
     if apps_decision:
         return apps_decision
+
+    live_decision = _route_live(original, lowered)
+    if live_decision:
+        return live_decision
 
     reminder_text = _extract_reminder_text(original, lowered)
     if reminder_text:
@@ -560,6 +678,16 @@ def route(text: str) -> dict[str, str | None]:
     #    collapse into a bare music decision).
     if _is_multi_step(lowered):
         return {"tool": "__agent__", "text": original}
+
+    # 1b. A general web search: Claude does it properly (it has live search). If Claude isn't
+    #     available, fall back to Wikipedia and the news rather than guessing.
+    web_query = _extract_web_search(lowered)
+    if web_query:
+        if BRAIN_MODE == "claude":
+            claude_decision = think_claude(original)
+            if claude_decision is not None:
+                return claude_decision
+        return {"tool": "system", "action": "web_search", "value": web_query}
 
     # 2. Fast-path: regex/string matching (zero LLM cost)
     fast_decision = _route_fast(original, lowered)

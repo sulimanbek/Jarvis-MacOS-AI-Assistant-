@@ -140,9 +140,9 @@ def test_route_falls_back_to_llm_when_no_fast_path_matches(monkeypatch):
 
 def test_route_llm_fallback_handles_conversational_response(monkeypatch):
     _clear_memory(monkeypatch)
-    monkeypatch.setattr(router, "think_local", lambda text: {"tool": None, "response": "It's sunny today."})
-    result = router.route("how's the weather")
-    assert result == {"tool": None, "response": "It's sunny today."}
+    monkeypatch.setattr(router, "think_local", lambda text: {"tool": None, "response": "I'm doing well, thanks."})
+    result = router.route("how are you feeling today")
+    assert result == {"tool": None, "response": "I'm doing well, thanks."}
 
 
 def test_route_llm_fallback_rejects_disallowed_tool(monkeypatch):
