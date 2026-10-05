@@ -147,7 +147,7 @@ export const UI_DEFAULTS: UiState = {
   accent: null, background: null, palette: {},
   reactor: { color: null, scale: 1, intensity: 1, spin: 1, style: 'ring', visible: true },
   orbits: [],
-  chrome: { systems: true, transcript: true, toolBadge: true, suggestions: true, brand: true },
+  chrome: { systems: false, transcript: true, toolBadge: true, suggestions: false, brand: true },
   effect: null,
 }
 
@@ -417,14 +417,14 @@ export const useStore = create<State>((set) => ({
 
 /** Colour identity per phase — shared by the 3D scene and the 2D HUD. */
 export const phaseColor: Record<Phase, string> = {
-  offline: '#0d4a4a',
-  boot: '#17b3b3',
-  dormant: '#12908f',
-  waking: '#5cf2ef',
-  listening: '#19d8d2',
-  thinking: '#f0a93c',
-  tooling: '#a97bff',
-  speaking: '#3ef2a8',
+  offline: '#243556',
+  boot: '#4f7fe0',
+  dormant: '#3d63b8',
+  waking: '#8db2ff',
+  listening: '#5b95ff',
+  thinking: '#6a8bff',
+  tooling: '#8a7dff',
+  speaking: '#6db4ff',
 }
 
 /**

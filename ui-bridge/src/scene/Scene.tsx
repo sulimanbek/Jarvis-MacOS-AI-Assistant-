@@ -1,16 +1,8 @@
 import { useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import {
-  EffectComposer,
-  Bloom,
-  ChromaticAberration,
-  Vignette,
-  Noise,
-} from '@react-three/postprocessing'
-import { BlendFunction } from 'postprocessing'
+import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { Core } from './Core'
-import { Particles } from './Particles'
 import { Orbits } from './Orbits'
 import { useStore, phaseColor, accentFor, type Phase } from '../store'
 
@@ -186,7 +178,6 @@ function Rig() {
   return (
     <>
       <Core drive={drive} />
-      <Particles drive={drive} />
       <Orbits />
     </>
   )
@@ -219,7 +210,7 @@ export function Scene() {
       <EffectComposer multisampling={0}>
         {/* Bloom is what turns additive lines into "hologram". */}
         <Bloom
-          intensity={1.15}
+          intensity={0.55}
           // A higher threshold keeps the mid-tones intact so the orb doesn't
           // flatten into a solid white disc.
           luminanceThreshold={0.22}
@@ -227,13 +218,7 @@ export function Scene() {
           mipmapBlur
           radius={0.72}
         />
-        <ChromaticAberration
-          offset={new THREE.Vector2(0.0009, 0.0012)}
-          radialModulation={false}
-          modulationOffset={0}
-        />
-        <Noise opacity={0.035} blendFunction={BlendFunction.OVERLAY} />
-        <Vignette eskil={false} offset={0.22} darkness={0.95} />
+        <Vignette eskil={false} offset={0.25} darkness={0.6} />
       </EffectComposer>
     </Canvas>
   )

@@ -3,9 +3,9 @@
 :root {
   /* The interface cyan. `--accent` is re-declared per phase and per panel;
      this one stays put and is what anything neutral pins itself to. */
-  --interface: #00e5ff;
+  --interface: #4f8cff;
   --accent: var(--interface);
-  --bg: #01060c;
+  --bg: #04070f;
   font-family: 'Chakra Petch', system-ui, sans-serif;
   color-scheme: dark;
 }
@@ -23,7 +23,7 @@ body,
   overflow: hidden;
 }
 
-/* Faint scanlines + radial falloff so the 3D never sits on flat black. */
+/* A soft radial falloff so the 3D never sits on flat black. */
 body::after {
   content: '';
   position: fixed;
@@ -31,14 +31,7 @@ body::after {
   pointer-events: none;
   z-index: 5;
   background:
-    radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.55) 100%),
-    repeating-linear-gradient(
-      0deg,
-      rgba(0, 229, 255, 0.028) 0px,
-      rgba(0, 229, 255, 0.028) 1px,
-      transparent 1px,
-      transparent 3px
-    );
+    radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.4) 100%);
 }
 
 .scene {
@@ -57,47 +50,28 @@ body::after {
   color: var(--accent);
   transition: color 600ms ease;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.1em;
   font-size: 11px;
 }
 
-.corner {
-  position: absolute;
-  width: 46px;
-  height: 46px;
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  opacity: 0.8;
-}
-.corner-tl { top: 26px; left: 26px; border-right: 0; border-bottom: 0; }
-.corner-tr { top: 26px; right: 26px; border-left: 0; border-bottom: 0; }
-.corner-bl { bottom: 26px; left: 26px; border-right: 0; border-top: 0; }
-.corner-br { bottom: 26px; right: 26px; border-left: 0; border-top: 0; }
-
 .hud-top {
   position: absolute;
-  top: 44px;
+  top: 36px;
   left: 0;
   right: 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 0 92px;
+  padding: 0 48px;
 }
 
 .brand-mark {
   display: block;
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: 0.42em;
-  text-shadow: 0 0 22px color-mix(in srgb, var(--accent) 70%, transparent);
-}
-
-.brand-sub {
-  display: block;
-  margin-top: 5px;
-  font-size: 9px;
-  letter-spacing: 0.22em;
-  opacity: 0.42;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.34em;
+  /* Lifted toward white so the quietest phase colour is still easy to read. */
+  color: color-mix(in srgb, var(--accent) 55%, #dfe9ff);
 }
 
 .status {
@@ -105,6 +79,7 @@ body::after {
   align-items: center;
   gap: 10px;
   font-size: 10px;
+  color: color-mix(in srgb, var(--accent) 55%, #dfe9ff);
   /* The header is space-between, so with the wordmark hidden the status line
      would slide to the left edge on its own. Claiming the free space keeps it
      pinned right whether or not the brand is there — and with both present it
@@ -117,8 +92,8 @@ body::after {
   height: 7px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
-  animation: pulse 1.8s ease-in-out infinite;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 55%, transparent);
+  animation: pulse 2.4s ease-in-out infinite;
 }
 
 @keyframes pulse {
@@ -137,8 +112,7 @@ body::after {
   gap: 9px;
   font-size: 10px;
 }
-.rail-left { left: 92px; }
-.rail-right { right: 92px; align-items: flex-end; }
+.rail-left { left: 48px; }
 
 .rail-title {
   font-size: 8px;
@@ -164,22 +138,6 @@ body::after {
   box-shadow: 0 0 8px var(--accent);
 }
 
-.meter {
-  width: 3px;
-  height: 96px;
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  display: flex;
-  align-items: flex-end;
-  margin: 4px 0;
-}
-
-.meter-fill {
-  width: 100%;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
-  transition: height 90ms linear;
-}
-
 /* Tool badge */
 
 /* The tool readout. This is the moment the interface proves it did something
@@ -199,11 +157,9 @@ body::after {
   gap: 14px;
   white-space: nowrap;
   padding: 7px 16px 7px 14px;
-  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--accent) 9%, rgba(2, 10, 12, 0.55));
-  backdrop-filter: blur(5px);
-  box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  border-radius: 999px;
+  background: transparent;
   /* Above the panels and the log so a long tool name reads cleanly, but it is a
      thin chip that never enters the transcript's space to begin with. */
   z-index: 6;
@@ -230,8 +186,7 @@ body::after {
   max-width: min(52vw, 620px);
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #f2fbff;
-  text-shadow: 0 0 24px color-mix(in srgb, var(--accent) 55%, transparent);
+  color: #e8f0ff;
 }
 
 @media (max-width: 1100px) {
@@ -286,8 +241,7 @@ body::after {
 
 .log-user .log-text { opacity: 0.52; }
 .log-jarvis .log-text {
-  color: #eaf9ff;
-  text-shadow: 0 0 26px color-mix(in srgb, var(--accent) 45%, transparent);
+  color: #e8f0ff;
 }
 
 /* Live partial transcript while listening */
@@ -317,17 +271,6 @@ body::after {
   letter-spacing: 0.04em;
   max-width: 70vw;
   text-align: center;
-}
-
-.hud-bottom {
-  position: absolute;
-  bottom: 44px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  font-size: 9px;
-  opacity: 0.38;
-  letter-spacing: 0.2em;
 }
 
 kbd {
@@ -542,7 +485,7 @@ kbd {
 .hud-label {
   font-size: 12.5px;
   line-height: 1.35;
-  color: #e8f8ff;
+  color: #e8f0ff;
   /* Two lines then clip — a HUD row, not a paragraph. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -704,7 +647,7 @@ kbd {
   font-family: 'JetBrains Mono', monospace;
   font-size: 40px;
   line-height: 1;
-  color: #eafaff;
+  color: #e8f0ff;
   text-shadow: 0 0 30px color-mix(in srgb, var(--accent) 65%, transparent);
 }
 
@@ -722,7 +665,7 @@ kbd {
   font-size: 12px;
   line-height: 1.55;
   opacity: 0.8;
-  color: #dff4ff;
+  color: #e8f0ff;
 }
 
 .hud-grid {
@@ -803,19 +746,19 @@ kbd {
   z-index: 7;
   display: grid;
   place-items: center;
-  background: radial-gradient(ellipse at center, #04121c 0%, #01060c 70%);
+  background: radial-gradient(ellipse at center, #0a1428 0%, #04070f 70%);
   border: 0;
   cursor: pointer;
   font-family: inherit;
-  color: #4fd6ff;
+  color: #7aa8ff;
 }
 
 .ignition-ring {
   position: absolute;
   width: 240px;
   height: 240px;
-  border: 1px solid rgba(79, 214, 255, 0.28);
-  border-top-color: rgba(79, 214, 255, 0.9);
+  border: 1px solid rgba(110, 160, 255, 0.28);
+  border-top-color: rgba(110, 160, 255, 0.9);
   border-radius: 50%;
 }
 
@@ -828,9 +771,8 @@ kbd {
 
 .ignition-word {
   font-size: 15px;
-  letter-spacing: 0.52em;
-  text-indent: 0.52em; /* balance the trailing letter-space */
-  text-shadow: 0 0 30px rgba(79, 214, 255, 0.7);
+  letter-spacing: 0.4em;
+  text-indent: 0.4em; /* balance the trailing letter-space */
 }
 
 .ignition-sub {
@@ -841,7 +783,7 @@ kbd {
 }
 
 .ignition:hover .ignition-word {
-  text-shadow: 0 0 44px rgba(79, 214, 255, 1);
+  opacity: 0.8;
 }
 
 /* ------------------------------------------------------------------- boot */
@@ -852,163 +794,50 @@ kbd {
   z-index: 6;
   background: var(--bg);
   color: var(--accent);
-  overflow: hidden;
-}
-
-/* -- beat 1: the status bar -------------------------------------------- */
-
-.boot-bar {
-  position: absolute;
-  top: 12%;
-  left: 0;
-  right: 0;
-  padding: 0 min(9vw, 140px);
-  transition: opacity 0.6s ease, filter 0.6s ease;
-}
-.boot-bar-dim { opacity: 0.28; filter: blur(0.6px); }
-
-.boot-bar-frame {
-  position: relative;
-  border-top: 1.5px solid var(--accent);
-  border-bottom: 1.5px solid var(--accent);
-  padding: 14px 26px 12px;
-  clip-path: polygon(3% 0, 97% 0, 100% 42%, 97% 100%, 3% 100%, 0 42%);
-  box-shadow:
-    inset 0 0 40px color-mix(in srgb, var(--accent) 12%, transparent),
-    0 0 30px color-mix(in srgb, var(--accent) 18%, transparent);
-}
-
-.boot-bar-title {
-  display: inline-flex;
-  align-items: center;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: clamp(18px, 3.4vw, 40px);
-  font-weight: 300;
-  letter-spacing: 0.14em;
-  color: #eafcff;
-  text-shadow: 0 0 26px color-mix(in srgb, var(--accent) 60%, transparent);
-}
-.boot-dots { opacity: 0.6; margin: 0 0.2em; }
-.boot-cursor {
-  display: inline-block;
-  width: 0.6em;
-  height: 1.05em;
-  margin-left: 0.15em;
-  background: var(--accent);
-  animation: bootBlink 0.7s steps(1) infinite;
-}
-@keyframes bootBlink { 50% { opacity: 0 } }
-
-.boot-seg { display: flex; gap: 3px; margin-top: 12px; }
-.boot-seg-cell {
-  flex: 1;
-  height: 12px;
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  transition: background 0.12s ease, box-shadow 0.12s ease;
-}
-.boot-seg-cell[data-on='1'] {
-  background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
-}
-
-.boot-log {
-  margin-top: 14px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  line-height: 1.9;
-  letter-spacing: 0.06em;
-  opacity: 0.6;
-}
-.boot-log-line { animation: bootLogIn 0.25s ease both; }
-.boot-log-line::before { content: '\203a  '; opacity: 0.5; }
-@keyframes bootLogIn { from { opacity: 0; transform: translateX(-8px) } }
-
-/* -- beats 2-4: the centre stage --------------------------------------- */
-
-.boot-stage {
-  position: absolute;
-  inset: 0;
   display: grid;
   place-items: center;
 }
-.boot-rings,
-.boot-suit,
-.boot-reactor {
-  width: min(58vmin, 520px);
-  height: min(58vmin, 520px);
-  overflow: visible;
+
+.boot-min {
+  position: relative;
+  width: 168px;
+  height: 168px;
+  display: grid;
+  place-items: center;
 }
 
-.boot-ring {
-  fill: none;
-  stroke: var(--accent);
-  opacity: 0.8;
-  transform-box: fill-box;
-  transform-origin: center;
-  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 50%, transparent));
-}
-.boot-name {
-  fill: #eafcff;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 20px;
-  text-anchor: middle;
-  dominant-baseline: middle;
+.boot-min-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
 }
 
-.boot-wire {
+.boot-min-ring circle {
   fill: none;
-  stroke: var(--accent);
-  stroke-width: 1.4;
-  opacity: 0.9;
-  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent) 55%, transparent));
-}
-.boot-wire-dim { opacity: 0.4; stroke-width: 1; }
-.boot-suit-fig { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 40%, transparent)); }
-.boot-tag {
-  fill: var(--accent);
-  opacity: 0.55;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 9px;
-  letter-spacing: 0.14em;
-  text-anchor: middle;
+  stroke: currentColor;
+  stroke-width: 0.6;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: bootDraw 1.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-.boot-r-seg {
-  stroke: color-mix(in srgb, var(--accent) 30%, transparent);
-  stroke-width: 8;
+.boot-min-name {
+  font-size: 13px;
+  letter-spacing: 0.4em;
+  text-indent: 0.4em;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: bootName 0.8s ease 0.5s forwards;
 }
-.boot-r-on { stroke: #dffbff; filter: drop-shadow(0 0 8px var(--accent)); }
-.boot-r-ring {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: 2;
-  opacity: calc(0.3 + var(--glow) * 0.6);
-}
-.boot-r-ring-in { stroke-width: 1.5; opacity: calc(0.2 + var(--glow) * 0.5); }
-.boot-r-tri {
-  fill: color-mix(in srgb, var(--accent) calc(var(--glow) * 45%), transparent);
-  stroke: #eafcff;
-  stroke-width: 3;
-  stroke-linejoin: round;
-  filter: drop-shadow(0 0 calc(var(--glow) * 26px) var(--accent));
-}
-.boot-r-tri-in {
-  fill: color-mix(in srgb, #eafcff calc(var(--glow) * 60%), transparent);
-  stroke: none;
-}
-.boot-r-v {
-  fill: none;
-  stroke: #05161a;
-  stroke-width: 3.5;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  opacity: var(--glow);
-}
+
+@keyframes bootDraw { to { stroke-dashoffset: 0; } }
+@keyframes bootName { to { opacity: 0.9; } }
 
 @media (max-width: 900px) {
   .hud-top { padding: 0 46px; }
   .rail-left { left: 30px; }
-  .rail-right { right: 30px; }
   .log { width: 84vw; }
 }
 
@@ -1268,7 +1097,7 @@ kbd {
   font-size: 10px;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: #e6f9ff;
+  color: #e8f0ff;
   text-shadow:
     0 0 18px var(--accent),
     0 0 44px color-mix(in srgb, var(--accent) 55%, transparent);
@@ -1431,7 +1260,7 @@ kbd {
 }
 
 .fx-glitch::before { background: rgba(255, 40, 90, 0.13) }
-.fx-glitch::after  { background: rgba(40, 220, 255, 0.13); animation-direction: reverse }
+.fx-glitch::after  { background: rgba(79, 140, 255, 0.13); animation-direction: reverse }
 
 @keyframes fxChroma {
   0%, 100% { transform: translateX(0);    opacity: 0 }
@@ -1495,20 +1324,20 @@ kbd {
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
   padding: 0.75rem 0.9rem;
-  background: rgba(2, 10, 12, 0.94);
-  border: 1px solid var(--accent, #19d8d2);
+  background: rgba(4, 10, 22, 0.94);
+  border: 1px solid var(--accent, #4f8cff);
   border-radius: 2px;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 0.72rem;
   line-height: 1.6;
-  color: #cfe6e3;
+  color: #c3d2ee;
   pointer-events: none;
   backdrop-filter: blur(6px);
 }
 
 .diag-head {
   letter-spacing: 0.18em;
-  color: var(--accent, #19d8d2);
+  color: var(--accent, #4f8cff);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   padding-bottom: 0.4rem;
   margin-bottom: 0.5rem;
@@ -1525,7 +1354,7 @@ kbd {
 .diag-sec {
   margin: 0.7rem 0 0.3rem;
   letter-spacing: 0.16em;
-  color: #6d8886;
+  color: #6b7fa3;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 0.45rem;
 }
@@ -1536,8 +1365,8 @@ kbd {
   gap: 0.5rem;
 }
 
-.diag-k { color: #6d8886; }
-.diag-v { color: #cfe6e3; overflow-wrap: anywhere; }
+.diag-k { color: #6b7fa3; }
+.diag-v { color: #c3d2ee; overflow-wrap: anywhere; }
 .diag-ok { color: #3ef2a8; }
 .diag-bad { color: #ff6b6b; }
 
@@ -1572,8 +1401,8 @@ kbd {
   padding: 0;
   background: linear-gradient(
     160deg,
-    color-mix(in srgb, var(--accent) 11%, rgba(4, 12, 18, 0.94)),
-    color-mix(in srgb, var(--accent) 4%, rgba(2, 8, 12, 0.96))
+    color-mix(in srgb, var(--accent) 11%, rgba(6, 12, 24, 0.94)),
+    color-mix(in srgb, var(--accent) 4%, rgba(4, 8, 18, 0.96))
   );
   border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
   backdrop-filter: blur(14px);
@@ -1795,7 +1624,7 @@ kbd {
   letter-spacing: 0.18em;
   color: color-mix(in srgb, var(--accent) 90%, white);
   border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  background: color-mix(in srgb, var(--accent) 10%, rgba(2, 8, 12, 0.8));
+  background: color-mix(in srgb, var(--accent) 10%, rgba(4, 8, 18, 0.8));
   backdrop-filter: blur(8px);
   pointer-events: none;
 }
@@ -1823,7 +1652,7 @@ kbd {
   min-width: 210px;
   padding: 11px 13px 9px;
   border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
-  background: color-mix(in srgb, var(--accent) 8%, rgba(2, 8, 12, 0.86));
+  background: color-mix(in srgb, var(--accent) 8%, rgba(4, 8, 18, 0.86));
   backdrop-filter: blur(10px);
   pointer-events: none;
   text-transform: none;

@@ -223,10 +223,10 @@ export function Core({ drive }: { drive: Drive }) {
 
   const uniforms = useMemo(
     () => ({
-      uColor: { value: new THREE.Color('#19c4c4') },
+      uColor: { value: new THREE.Color('#4f8cff') },
       // Not white — a tinted highlight keeps the hue readable once bloom
       // stacks on top, instead of washing the ring out to a grey band.
-      uHot: { value: new THREE.Color('#c9fdff') },
+      uHot: { value: new THREE.Color('#dbe7ff') },
       uLevel: { value: 0 },
       uPhase: { value: 0 },
       uOpen: { value: 0 },
