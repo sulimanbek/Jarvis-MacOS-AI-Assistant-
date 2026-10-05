@@ -2,7 +2,7 @@
 daemon.py — always-on background Jarvis.
 
 Trigger modes (both active simultaneously):
-  1. Wake word  — say the configured wake word (default: "alexa")
+  1. Wake word  — say the configured wake word (default: "hey jarvis")
   2. Double clap — two sharp claps within 700ms
 
 Run:   python daemon.py

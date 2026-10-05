@@ -34,7 +34,7 @@ and a Claude Code login for the Claude brain; `--local --no-hud` needs neither.
 
 **`jarvis.py`** — Push-to-talk: hold Space, speak, release. Simple loop with no threading.
 
-**`daemon.py`** — Always-on background process. Activates via wake word (openWakeWord, default: "alexa") **or** double clap (within 700ms). Uses `ContinuousListener` + `ClapTrigger` running concurrently. A `JarvisState` state machine (`core/state_machine.py`) prevents overlapping activations — clap triggers are ignored while Jarvis is busy.
+**`daemon.py`** — Always-on background process. Activates via wake word (openWakeWord, default: "hey_jarvis") **or** double clap (within 700ms). Uses `ContinuousListener` + `ClapTrigger` running concurrently. A `JarvisState` state machine (`core/state_machine.py`) prevents overlapping activations — clap triggers are ignored while Jarvis is busy.
 
 ## Architecture
 
@@ -73,6 +73,22 @@ a Node bridge running the Claude Agent SDK plus a React/Three.js holographic HUD
 
 ### Brain (core/brain_local.py)
 Sends transcribed text to Ollama with a JSON-response system prompt. Returns `{"tool": "app"|"music"|"browser"|"shortcut"|"system"|null, ...}`. Configurable personalities via `PERSONALITY_MODE` in `config.py`: `"siri"`, `"smooth"`, `"professional"`, `"chill"`.
+
+### Local connections (tools/, core/system_actions.py)
+New abilities are added once, in the `SYSTEM_ACTIONS` registry (`core/system_actions.py`), which
+the executor, planner prompts and plan validator all derive from. Music transport (`tools/media.py`,
+Apple Music only, never launches Music), read-only Calendar (`tools/calendar.py`) and Mail
+(`tools/mail.py`) go through AppleScript; spoken phrases for them are in `router._route_apps`
+(anchored regexes, so ordinary sentences aren't taken for commands, and anything with an editing
+verb is left alone). Calendar, mail, clipboard and screenshot are in
+`mac_actions.MODEL_BLOCKED_SYSTEM_ACTIONS`: answered locally, never handed to Claude.
+Shortcuts: `tools/shortcuts.match_shortcut` maps a spoken sentence to an installed shortcut name;
+the Shortcuts app only runs an exact name.
+
+### Wake word (audio/wake_word.py)
+openWakeWord needs 16-bit PCM sample values; the mic stream is float32 in -1..1, so
+`to_pcm16` scales it. Without that the model scored 0.00 on everything and only the clap worked.
+Default model is the bundled `hey_jarvis`.
 
 ### Executor (core/executor.py)
 Dispatches router output to the correct tool module. Returns `{ok, message, code, action_type, retryable, data}`.

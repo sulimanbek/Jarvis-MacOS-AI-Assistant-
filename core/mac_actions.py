@@ -9,8 +9,8 @@ model can be steered by text it read (a web page, an email). So on top of the
 normal policy:
   - browser / open / shortcut always need a spoken yes, whatever policy.json says
     — opening a URL can carry data out in the address;
-  - clipboard_read and screenshot are refused — they hand private content to the
-    model. They still work when *you* ask for them out loud.
+  - clipboard_read, screenshot, calendar and mail reads are refused — they hand
+    private content to the model. They still work when *you* ask for them out loud.
 """
 
 from collections.abc import Callable
@@ -23,8 +23,17 @@ from security.policy import requires_confirmation as _policy_requires_confirmati
 # Always confirmed when Claude is the one asking.
 MODEL_CONFIRM_TOOLS = {"browser", "open", "shortcut"}
 
-# System actions Claude may not trigger.
-MODEL_BLOCKED_SYSTEM_ACTIONS = {"clipboard_read", "screenshot"}
+# System actions Claude may not trigger. These hand private content (your
+# clipboard, screen, calendar, mail) to the model, and calendar or mail text can
+# carry instructions written by someone else. They still work when *you* ask out
+# loud: those are answered on this Mac and never sent to Claude.
+MODEL_BLOCKED_SYSTEM_ACTIONS = {
+    "clipboard_read",
+    "screenshot",
+    "calendar_today",
+    "calendar_next",
+    "mail_unread",
+}
 
 Confirmer = Callable[[dict], bool]
 _confirmer: Confirmer | None = None

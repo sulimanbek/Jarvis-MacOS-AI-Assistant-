@@ -23,8 +23,13 @@ Pick exactly one tool and fill only the fields it needs:
   open      { target }                 open something else by name
   system    { action, value? }         volume_up, volume_down, mute, unmute, volume_status,
                                        lock_screen, sleep_display, battery_status,
-                                       brightness_up, brightness_down, reminder_add, note_add
-  shortcut  { name }                   run a macOS Shortcut
+                                       brightness_up, brightness_down, reminder_add, note_add,
+                                       pause, resume, next_track, previous_track, now_playing,
+                                       shortcuts_list
+  shortcut  { name }                   run a macOS Shortcut by name (see shortcuts_list)
+
+Calendar and email are read out by the Mac side itself when the user asks for
+them; you cannot read them, and should not try.
 
 Simple requests like these are usually handled before they reach you, so you
 see the ones that were phrased unusually. Use this only when the user actually

@@ -34,13 +34,33 @@ fast-path   multi-step agent     Claude (via bridge)  ──►  Ollama if bridg
 
 | Tier | Handles | Cost |
 |---|---|---|
-| **Fast-path** | play, open, volume, battery, reminders, notes, "play that again" | none |
+| **Fast-path** | play, open, volume, battery, reminders, notes, music controls, calendar, unread mail, shortcuts, "play that again" | none |
 | **Multi-step agent** | "open Safari and then play Mozart": plan is validated (allowlist, max 5 steps, no shell), run step by step, each step verified | local model |
 | **Claude** | questions, conversation, anything unusual, and live answers (news, weather, scores) via built-in web search | your Claude usage |
 
 The **HUD** (`ui-bridge/`) is a blue React + Three.js interface (a glowing reactor ring over a realistic night sky, status rails and the conversation) that runs display-only: it shows state, what was heard, replies, and anything Claude puts on screen. The Python process keeps the microphone and the voice.
 
 ---
+
+## What you can say
+
+| Say | Does |
+|---|---|
+| "play Starboy", "play that again" | Apple Music |
+| "pause", "resume", "next song", "previous song", "what's playing" | music controls (Music app) |
+| "what's on my calendar", "when's my next meeting" | reads Calendar (read-only) |
+| "check my email", "any unread mail" | unread count and newest senders (read-only, never sends) |
+| "run the shortcut playlist", "what shortcuts do I have" | Shortcuts (asks for a spoken yes first) |
+| "volume up", "battery", "mute", "lock my screen" | system |
+| "remind me to…", "take a note…" | Reminders, Notes |
+| "open Safari", "go to YouTube" | apps and websites |
+| anything else | Claude (or the local model) |
+
+Calendar and mail are read out on your Mac and never sent to Claude, and Claude is
+not allowed to read them either. The first time, macOS asks whether the app that
+launched Jarvis may control Calendar or Mail: allow it under System Settings, Privacy
+& Security, Automation. Repeating events show only on their first day (an AppleScript
+limit).
 
 ## Requirements
 
@@ -67,7 +87,7 @@ scripts/start_all.sh --local    # HUD + local Ollama brain; Claude is never cont
 scripts/start_all.sh --local --no-hud   # headless and fully offline (no Node needed)
 ```
 
-Open `http://localhost:5173` in Chrome (the script does this), click **INITIALISE**, then clap twice or say the wake word (default: "alexa").
+Open `http://localhost:5173` in Chrome (the script does this), click **INITIALISE**, then clap twice or say "hey jarvis".
 
 Without the launcher:
 

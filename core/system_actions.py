@@ -17,8 +17,19 @@ value-taking actions, their prompt examples) from this module.
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from tools.calendar import next_message as _calendar_next_message
+from tools.calendar import today_message as _calendar_today_message
+from tools.mail import unread_message as _mail_unread_message
+from tools.media import (
+    next_track,
+    now_playing,
+    pause_music,
+    previous_track,
+    resume_music,
+)
 from tools.notes import add_note
 from tools.reminders import add_reminder
+from tools.shortcuts import list_shortcuts
 from tools.system import (
     brightness_down,
     brightness_up,
@@ -156,6 +167,56 @@ def _note_add(value: str | None = None) -> tuple[bool, str, dict]:
     return ok, message, {"text": text} if ok else {}
 
 
+def _pause(_value: str | None = None) -> tuple[bool, str, dict]:
+    ok, message = pause_music()
+    return ok, message, {}
+
+
+def _resume(_value: str | None = None) -> tuple[bool, str, dict]:
+    ok, message = resume_music()
+    return ok, message, {}
+
+
+def _next_track(_value: str | None = None) -> tuple[bool, str, dict]:
+    ok, message = next_track()
+    return ok, message, {}
+
+
+def _previous_track(_value: str | None = None) -> tuple[bool, str, dict]:
+    ok, message = previous_track()
+    return ok, message, {}
+
+
+def _now_playing(_value: str | None = None) -> tuple[bool, str, dict]:
+    ok, message = now_playing()
+    return ok, message, {}
+
+
+def _calendar_today(_value: str | None = None) -> tuple[bool, str, dict]:
+    ok, message = _calendar_today_message()
+    return ok, message, {}
+
+
+def _calendar_next(_value: str | None = None) -> tuple[bool, str, dict]:
+    ok, message = _calendar_next_message()
+    return ok, message, {}
+
+
+def _mail_unread(_value: str | None = None) -> tuple[bool, str, dict]:
+    ok, message = _mail_unread_message()
+    return ok, message, {}
+
+
+def _shortcuts_list(_value: str | None = None) -> tuple[bool, str, dict]:
+    names = list_shortcuts()
+    if not names:
+        return True, "You don't have any shortcuts yet.", {}
+    shown = ", ".join(names[:10])
+    more = f", and {len(names) - 10} more" if len(names) > 10 else ""
+    noun = "shortcut" if len(names) == 1 else "shortcuts"
+    return True, f"You have {len(names)} {noun}: {shown}{more}.", {}
+
+
 SYSTEM_ACTIONS: dict[str, SystemAction] = {
     action.name: action
     for action in [
@@ -173,6 +234,15 @@ SYSTEM_ACTIONS: dict[str, SystemAction] = {
         SystemAction("screenshot", _screenshot),
         SystemAction("reminder_add", _reminder_add, requires_value=True, value_hint="reminder text"),
         SystemAction("note_add", _note_add, requires_value=True, value_hint="note text"),
+        SystemAction("pause", _pause),
+        SystemAction("resume", _resume),
+        SystemAction("next_track", _next_track),
+        SystemAction("previous_track", _previous_track),
+        SystemAction("now_playing", _now_playing),
+        SystemAction("calendar_today", _calendar_today),
+        SystemAction("calendar_next", _calendar_next),
+        SystemAction("mail_unread", _mail_unread),
+        SystemAction("shortcuts_list", _shortcuts_list),
     ]
 }
 

@@ -60,9 +60,9 @@ AGENT_MAX_STEPS = 5             # Hard cap on multi-step plan length
 
 
 # ---------- WAKE WORD ----------
-# Pre-trained models (no download needed): alexa, hey_mycroft, hey_rhasspy, ok_nabu
-# Custom "hey_jarvis" model: train one at github.com/dscripka/openWakeWord
-WAKE_WORD_MODEL = "alexa"
+# Pre-trained models that ship with openWakeWord (no download needed):
+#   hey_jarvis, alexa, hey_mycroft, hey_rhasspy, timer, weather
+WAKE_WORD_MODEL = "hey_jarvis"
 WAKE_WORD_THRESHOLD = 0.5       # 0.0–1.0 — raise to reduce false triggers
 
 

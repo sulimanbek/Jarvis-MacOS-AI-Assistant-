@@ -11,7 +11,7 @@ from memory.context import (
 from tools.apps import is_app_running, open_app
 from tools.browser import open_target
 from tools.music import play_music_any
-from tools.shortcuts import run_shortcut
+from tools.shortcuts import list_shortcuts, match_shortcut, run_shortcut
 from utils.logger import save_action
 
 
@@ -85,6 +85,22 @@ def execute(decision: dict, user_input: str) -> dict[str, Any]:
         name = (decision.get("name") or "").strip()
         if not name:
             return _result(False, "I couldn't figure out which shortcut to run.", "shortcut_missing_name", "shortcut")
+
+        # The Shortcuts app only runs an exact name, but people say a sentence
+        # ("run the shortcut playlist"), so match it to an installed shortcut.
+        names = list_shortcuts()
+        if names:
+            matched = match_shortcut(name, names)
+            if matched is None:
+                _record(user_input, "shortcut", False, f"No shortcut matches: {name}")
+                have = ", ".join(names[:8])
+                return _result(
+                    False,
+                    f"I couldn't find that shortcut. You have: {have}.",
+                    "shortcut_not_found",
+                    "shortcut",
+                )
+            name = matched
 
         ok = run_shortcut(name)
 

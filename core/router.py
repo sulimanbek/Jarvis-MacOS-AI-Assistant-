@@ -293,6 +293,62 @@ def _route_system(lowered: str) -> dict[str, str | None] | None:
     return None
 
 
+_EDIT_VERBS = re.compile(
+    r"\b(add|create|put|make|new|set|schedule|book|cancel|delete|remove|move|reschedule|"
+    r"send|compose|write|reply|forward|draft)\b"
+)
+
+
+def _sys(action: str) -> dict[str, str | None]:
+    return {"tool": "system", "action": action}
+
+
+def _route_apps(lowered: str) -> dict[str, str | None] | None:
+    """Music controls, calendar, mail and shortcut listing: answered locally."""
+    t = _strip_trailing_punctuation(lowered).replace("\u2019", "'")
+
+    # Music transport. Anchored, so ordinary sentences containing these words
+    # ("the pause in the film") are not taken for commands.
+    if re.fullmatch(r"(?:please )?(?:pause|hold)(?: the)?(?: music| song| track| playback| it)?", t):
+        return _sys("pause")
+    if re.fullmatch(r"(?:please )?(?:resume|unpause)(?: the)?(?: music| song| track| playback| it)?"
+                    r"|keep playing|continue (?:the )?(?:music|song)", t):
+        return _sys("resume")
+    if re.fullmatch(r"(?:please )?(?:next|skip)(?: this| the)?(?: song| track)?"
+                    r"|(?:play )?(?:the )?next (?:song|track)", t):
+        return _sys("next_track")
+    if re.fullmatch(r"(?:please )?(?:previous|go back)(?: a| the)?(?: song| track)?"
+                    r"|(?:play )?(?:the )?previous (?:song|track)", t):
+        return _sys("previous_track")
+    if re.fullmatch(r"what(?:'s| is)(?: currently)? playing(?: now| right now)?"
+                    r"|what song is (?:this|playing)(?: now)?|what(?:'s| is) this song", t):
+        return _sys("now_playing")
+
+    # Listing shortcuts (running one is handled further down).
+    if re.search(r"\b(?:what|which|list)\b.*\bshortcuts\b", t) and "run" not in t:
+        return _sys("shortcuts_list")
+
+    if _EDIT_VERBS.search(t):
+        return None  # asking to change something, not to read it
+
+    # Calendar.
+    if re.search(r"\bnext (?:meeting|event|appointment)\b|\bwhat'?s next on my (?:calendar|schedule)\b", t):
+        return _sys("calendar_next")
+    if (re.search(r"\b(?:my|the) (?:calendar|schedule|agenda)\b", t)
+            or re.search(r"\bdo i have (?:any )?(?:meetings|events|appointments)\b", t)
+            or re.search(r"\bwhat do i have (?:on )?today\b", t)):
+        return _sys("calendar_today")
+
+    # Mail (read-only).
+    if (re.search(r"\b(?:check|read)\b.*\b(?:e-?mails?|mail|inbox)\b", t)
+            or re.search(r"\bdo i have (?:any )?(?:new |unread )?(?:e-?mails?|mail)\b", t)
+            or re.search(r"\b(?:any|unread|new) (?:new |unread )?(?:e-?mails?|mail)\b", t)
+            or re.search(r"\bwhat'?s in my inbox\b|\bhow many unread\b", t)):
+        return _sys("mail_unread")
+
+    return None
+
+
 def _extract_reminder_text(original: str, lowered: str) -> str | None:
     patterns = [
         r"^remind me to\s+(.+)$",
@@ -334,6 +390,10 @@ def _route_fast(original: str, lowered: str) -> dict[str, str | None] | None:
     system_decision = _route_system(lowered)
     if system_decision:
         return system_decision
+
+    apps_decision = _route_apps(lowered)
+    if apps_decision:
+        return apps_decision
 
     reminder_text = _extract_reminder_text(original, lowered)
     if reminder_text:
