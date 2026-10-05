@@ -293,9 +293,13 @@ def _route_system(lowered: str) -> dict[str, str | None] | None:
     return None
 
 
+# Words that mean "change something" rather than "read it out". "schedule" and "new" are
+# deliberately NOT here as bare words: "check my schedule" and "any new emails" are reads.
+# "schedule" only counts as an edit when used as a verb ("schedule a meeting").
 _EDIT_VERBS = re.compile(
-    r"\b(add|create|put|make|new|set|schedule|book|cancel|delete|remove|move|reschedule|"
+    r"\b(add|create|put|make|set|book|cancel|delete|remove|move|reschedule|"
     r"send|compose|write|reply|forward|draft)\b"
+    r"|\bschedule (?:a|an|another|me|us|it|something|some)\b"
 )
 
 

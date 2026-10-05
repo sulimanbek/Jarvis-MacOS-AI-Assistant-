@@ -90,6 +90,16 @@ verb is left alone). Calendar, mail, clipboard and screenshot are in
 Shortcuts: `tools/shortcuts.match_shortcut` maps a spoken sentence to an installed shortcut name;
 the Shortcuts app only runs an exact name.
 
+### Voice (audio/tts.py)
+`speak()` runs `_run_speech` on a thread: ElevenLabs when `ELEVENLABS_API_KEY` is set (in `.env`) and
+`tts_engine()` allows it, otherwise (or on any failure) the macOS `say` voice. `TTS_ENGINE` is `auto`
+(ElevenLabs unless the brain is `local`, which stays offline), `elevenlabs`, or `system`. Audio is
+fetched a sentence ahead while the previous one plays and played with `afplay`; after a failed request
+the Mac voice is used for 60s (for the whole session on a 401/403). Only the fixed phrases in
+`_CACHEABLE` are cached (`~/.jarvis/voice-cache`); replies are never written to disk beyond a temp file
+deleted after playback. The wake-word "Yes?" goes through the same path (`speak_sync`). Tests never
+touch the network (conftest clears the key); `.env.example` documents the setting.
+
 ### Wake word (audio/wake_word.py)
 openWakeWord needs 16-bit PCM sample values; the mic stream is float32 in -1..1, so
 `to_pcm16` scales it. Without that the model scored 0.00 on everything and only the clap worked.

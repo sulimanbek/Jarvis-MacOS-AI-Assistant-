@@ -239,6 +239,8 @@ def test_executor_falls_back_to_the_given_name_when_the_list_is_unavailable(monk
     ("check my schedule", "calendar_today"), ("do I have any meetings", "calendar_today"),
     ("when is my next meeting", "calendar_next"), ("what's my next appointment", "calendar_next"),
     ("check my email", "mail_unread"), ("do I have any new emails", "mail_unread"),
+    ("what's my schedule", "calendar_today"), ("what's on my schedule today", "calendar_today"),
+    ("any new mail", "mail_unread"), ("any new email", "mail_unread"), ("is there a new email", "mail_unread"), ("do I have any new unread emails", "mail_unread"),
     ("any unread mail", "mail_unread"), ("what's in my inbox", "mail_unread"),
 ])
 def test_phrases_route_to_the_local_action(phrase, action):
@@ -250,6 +252,8 @@ def test_phrases_route_to_the_local_action(phrase, action):
     "send an email to sam", "reply to my email", "delete my unread mail",
     "the pause in that song is weird", "i need a pause from work", "skip to the end of the film",
     "run the shortcut playlist",
+    "schedule a meeting for tomorrow", "schedule me a call with ada", "create a new event for friday",
+    "write a new email to sam",
 ])
 def test_phrases_that_change_things_or_are_not_commands_are_left_alone(phrase):
     assert router._route_apps(phrase.lower()) is None

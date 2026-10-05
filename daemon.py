@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from audio.listener import ContinuousListener
-from audio.tts import speak, speak_ack
+from audio.tts import describe_engine, speak, speak_ack
 from config import BRAIN_MODE, WHISPER_BIN, WHISPER_MODEL
 from core.agent import run_agent
 from core.bridge_client import emit_event, get_client
@@ -183,6 +183,7 @@ def main():
                   "Start it with scripts/start_all.sh")
     emit_event("online", text="Jarvis online")
 
+    print(f"🔊 Voice: {describe_engine()}")
     speak("Jarvis online.")
     print("🟢 Jarvis running. Say the wake word or double-clap to activate.")
 

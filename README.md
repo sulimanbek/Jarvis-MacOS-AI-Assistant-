@@ -62,6 +62,27 @@ launched Jarvis may control Calendar or Mail: allow it under System Settings, Pr
 & Security, Automation. Repeating events show only on their first day (an AppleScript
 limit).
 
+## A better voice (ElevenLabs)
+
+The default Mac voice sounds robotic. For a natural one, create a free account at
+[elevenlabs.io](https://elevenlabs.io), make an API key (profile, API Keys), and put it in a file
+called `.env` in the project folder (`cp .env.example .env`, then fill it in; git ignores `.env`):
+
+```
+ELEVENLABS_API_KEY=your-key-here
+```
+
+Restart Jarvis and it speaks with **George**, a British male voice. Try others with
+`JARVIS_VOICE_ID=...` (any voice id from elevenlabs.io/app/voices). With no key, or if ElevenLabs
+fails or runs out of credits, Jarvis uses the Mac voice, so it never goes quiet.
+
+- **Privacy:** the text of each reply is sent to ElevenLabs to be spoken (nothing else, and no audio
+  of you). In local mode (`--local`) it stays on the Mac voice so that mode remains offline; set
+  `JARVIS_TTS=elevenlabs` to use ElevenLabs there too, or `JARVIS_TTS=system` to turn it off everywhere.
+- **Cost:** the free tier has a monthly character allowance and a chatty assistant uses it up. Short
+  fixed phrases ("Yes?", "On it.") are saved to `~/.jarvis/voice-cache` and never paid for twice.
+- The startup line `🔊 Voice: ...` says which voice is active.
+
 ## Requirements
 
 - macOS, Python 3.11+
@@ -123,7 +144,7 @@ Everything is in `config.py`.
 | `HUD_EVENTS` | Send live updates to the HUD |
 | `WHISPER_MODEL`, `WHISPER_BIN` | Speech-to-text paths |
 | `OLLAMA_MODEL`, `OLLAMA_URL` | Local model |
-| `TTS_VOICE`, `TTS_RATE`, `PERSONALITY_MODE` | Voice and tone (`siri`, `smooth`, `professional`, `chill`) |
+| `TTS_ENGINE`, `ELEVENLABS_*`, `TTS_VOICE`, `TTS_RATE`, `PERSONALITY_MODE` | Which voice speaks (ElevenLabs or Mac), its settings, and tone (`siri`, `smooth`, `professional`, `chill`) |
 | `WAKE_WORD_MODEL`, `WAKE_WORD_THRESHOLD` | Wake word |
 | `CLAP_ENERGY_THRESHOLD`, `CLAP_MAX_GAP_MS` | Double-clap tuning |
 | `AGENT_MAX_STEPS` | Cap on multi-step plans (default 5) |

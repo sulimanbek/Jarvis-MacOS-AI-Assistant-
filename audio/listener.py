@@ -1,5 +1,4 @@
 import contextlib
-import subprocess
 import threading
 import time
 from dataclasses import dataclass
@@ -7,6 +6,7 @@ from dataclasses import dataclass
 import numpy as np
 import sounddevice as sd
 
+from audio.tts import speak_sync
 from audio.wake_word import CHUNK_SAMPLES, WakeWordDetector
 from config import (
     AUDIO_CHANNELS,
@@ -16,8 +16,6 @@ from config import (
     CLAP_MAX_DURATION_MS,
     CLAP_MAX_GAP_MS,
     CLAP_MIN_GAP_MS,
-    TTS_RATE,
-    TTS_VOICE,
     WAKE_WORD_MODEL,
     WAKE_WORD_THRESHOLD,
 )
@@ -41,11 +39,7 @@ class _ClapState:
 
 def _speak_sync(text: str):
     """Blocking TTS — used between audio streams so mic doesn't pick up Jarvis's voice."""
-    cmd = ["say"]
-    if TTS_VOICE:
-        cmd += ["-v", TTS_VOICE]
-    cmd += ["-r", str(int(TTS_RATE)), text]
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    speak_sync(text)
 
 
 class ContinuousListener:

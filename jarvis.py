@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from audio.ptt import record_push_to_talk, set_level_callback
-from audio.tts import speak
+from audio.tts import describe_engine, speak
 from config import BRAIN_MODE, WHISPER_BIN, WHISPER_MODEL
 from core.bridge_client import emit_event, get_client
 from core.executor import execute
@@ -87,6 +87,7 @@ def _confirm_action(decision: dict) -> bool:
 
 def main():
     print("🎙️ Hold RIGHT OPTION to talk...")
+    print(f"🔊 Voice: {describe_engine()}")
     errors, warnings = _run_startup_health_checks()
     for warning in warnings:
         print(f"⚠️ Health warning: {warning}")

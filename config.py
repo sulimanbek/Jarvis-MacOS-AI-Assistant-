@@ -38,6 +38,29 @@ OLLAMA_RETRY_BACKOFF_SECONDS = 0.75
 SUBPROCESS_TIMEOUT = 12
 
 
+# ---------- VOICE ----------
+# Which voice speaks:
+#   "auto"       — ElevenLabs when ELEVENLABS_API_KEY is set (in .env) and the brain isn't
+#                  "local"; otherwise the macOS voice above. Local mode stays fully offline.
+#   "elevenlabs" — ElevenLabs whenever there is a key, even in local mode (replies are sent
+#                  to ElevenLabs to be spoken)
+#   "system"     — always the macOS voice (nothing leaves your Mac)
+# Override without editing this file: JARVIS_TTS=system python daemon.py
+TTS_ENGINE = os.environ.get("JARVIS_TTS", "auto").strip().lower()
+
+# George: a warm British male voice, one of ElevenLabs' built-in voices. Any voice id from
+# elevenlabs.io/app/voices works (JARVIS_VOICE_ID is shared with the bridge's settings).
+ELEVENLABS_VOICE_ID = os.environ.get("JARVIS_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
+ELEVENLABS_MODEL = "eleven_flash_v2_5"   # the low-latency model; "eleven_multilingual_v2" sounds a touch richer
+ELEVENLABS_STABILITY = 0.45              # lower = more expressive, higher = steadier
+ELEVENLABS_SIMILARITY = 0.75
+ELEVENLABS_SPEED = 1.0
+ELEVENLABS_TIMEOUT = 8                   # seconds to wait for audio before using the Mac voice
+ELEVENLABS_BASE_URL = "https://api.elevenlabs.io"
+# Fixed phrases ("Yes?", "On it.") are saved here so they play instantly and cost nothing twice.
+VOICE_CACHE_DIR = expand("~/.jarvis/voice-cache")
+
+
 # ---------- PERSONALITY ----------
 PERSONALITY_MODE = "siri"
 # options: smooth, siri, professional, chill
