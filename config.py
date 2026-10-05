@@ -38,6 +38,19 @@ OLLAMA_RETRY_BACKOFF_SECONDS = 0.75
 SUBPROCESS_TIMEOUT = 12
 
 
+# ---------- CONVERSATION ----------
+# After Jarvis answers, keep listening for a reply without needing "hey jarvis" again.
+# It goes back to waiting for the wake word after FOLLOWUP_SECONDS of quiet, or when you say
+# "thanks", "that's all", "never mind" or "stop".
+# Turn it off: JARVIS_FOLLOWUP=0 python daemon.py
+FOLLOWUP_ENABLED = os.environ.get("JARVIS_FOLLOWUP", "1").strip() != "0"
+FOLLOWUP_SECONDS = 7           # how long to wait for you to start talking
+FOLLOWUP_ONSET_ENERGY = 0.02   # how loud counts as you starting to speak (room noise is ~0.005)
+FOLLOWUP_ONSET_CHUNKS = 3      # ...for this many 80ms chunks in a row
+FOLLOWUP_MAX_TURNS = 25        # safety cap on back-to-back follow-ups
+FOLLOWUP_SETTLE_SECONDS = 0.4  # pause after Jarvis stops talking so the mic doesn't hear the tail
+
+
 # ---------- VOICE ----------
 # Which voice speaks:
 #   "auto"       — ElevenLabs when ELEVENLABS_API_KEY is set (in .env) and the brain isn't

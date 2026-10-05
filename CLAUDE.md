@@ -90,6 +90,18 @@ verb is left alone). Calendar, mail, clipboard and screenshot are in
 Shortcuts: `tools/shortcuts.match_shortcut` maps a spoken sentence to an installed shortcut name;
 the Shortcuts app only runs an exact name.
 
+### Conversation (daemon._follow_up, audio/utterance.py)
+After each command the daemon calls `_follow_up`: `tts.wait_until_quiet(settle=...)` (speak() is async,
+so a pending-speech counter says when Jarvis has actually finished), then
+`ContinuousListener.listen_for_followup(window)` listens with no wake word. `UtteranceDetector` is the
+pure state machine (needs `FOLLOWUP_ONSET_CHUNKS` loud chunks above `FOLLOWUP_ONSET_ENERGY` to start,
+keeps a pre-roll, ends on silence). Ends on silence, whisper noise (`_is_noise`), or a closing phrase
+(`END_CONVERSATION`); a real command that merely contains "thanks" still runs. "goodbye" etc. still
+exit. `FOLLOWUP_MAX_TURNS` caps runaway chains. `_confirm_action` uses the same wake-word-free listen.
+`JARVIS_FOLLOWUP=0` disables the loop (confirmations stay wake-word-free). Tested with a fake
+InputStream; verified once against the real microphone. Known limit: anything spoken in the room
+during the window is treated as a command, and there is no barge-in.
+
 ### Voice (audio/tts.py)
 `speak()` runs `_run_speech` on a thread: ElevenLabs when `ELEVENLABS_API_KEY` is set (in `.env`) and
 `tts_engine()` allows it, otherwise (or on any failure) the macOS `say` voice. `TTS_ENGINE` is `auto`

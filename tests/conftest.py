@@ -23,6 +23,7 @@ def _isolate_from_bridge(monkeypatch, tmp_path):
     monkeypatch.setattr(tts, "TTS_ENGINE", "system")
     monkeypatch.setattr(tts, "_cloud_down_until", 0.0)
     monkeypatch.setattr(tts, "_warned", set())
+    monkeypatch.setattr(tts, "_pending", 0)
 
     # And never shell out to the real Shortcuts app.
     import core.executor as executor

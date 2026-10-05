@@ -10,6 +10,7 @@ Stop:  say wake word → "goodbye", or Ctrl+C
 """
 
 import os
+import re
 import shutil
 
 from dotenv import load_dotenv
@@ -17,8 +18,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from audio.listener import ContinuousListener
-from audio.tts import describe_engine, speak, speak_ack
-from config import BRAIN_MODE, WHISPER_BIN, WHISPER_MODEL
+from audio.tts import describe_engine, speak, speak_ack, wait_until_quiet
+from config import (
+    BRAIN_MODE,
+    FOLLOWUP_ENABLED,
+    FOLLOWUP_MAX_TURNS,
+    FOLLOWUP_SECONDS,
+    FOLLOWUP_SETTLE_SECONDS,
+    WHISPER_BIN,
+    WHISPER_MODEL,
+)
 from core.agent import run_agent
 from core.bridge_client import emit_event, get_client
 from core.executor import execute
@@ -33,6 +42,18 @@ from services.ollama_service import ensure_ollama_running, is_ollama_running
 from utils.logger import save_action
 
 EXIT_COMMANDS = {"exit", "quit", "stop", "goodbye", "bye", "shut down", "shutdown"}
+# Said during a back-and-forth to end it and go back to waiting for the wake word.
+END_CONVERSATION = {
+    "thanks", "thank you", "thanks jarvis", "thank you jarvis", "that's all", "thats all",
+    "that will be all", "that'll be all", "never mind", "nevermind", "no thanks", "no thank you",
+    "nothing", "i'm good", "im good", "all good", "that's it", "stop", "cancel", "okay thanks",
+    "ok thanks", "okay thank you", "ok thank you",
+}
+# Things whisper "hears" in silence or background noise.
+_NOISE_WORDS = {
+    "you", "the", "uh", "um", "hmm", "mm", "mhm", "huh", "ah", "oh", "so", "and",
+    "thanks for watching", "thank you for watching", "bye", "bye bye",
+}
 CONFIRM_YES   = {"yes", "yeah", "yep", "confirm", "do it", "go ahead", "proceed"}
 CONFIRM_NO    = {"no",  "nope", "cancel", "stop",  "dont", "don't"}
 
@@ -62,10 +83,13 @@ def _requires_confirmation(decision: dict) -> bool:
 
 def _confirm_action(listener: ContinuousListener, decision: dict) -> bool:
     tool = (decision.get("tool") or "action").strip()
-    speak(f"Should I proceed with {tool}? Say yes or no after the wake word.")
+    speak(f"Should I proceed with {tool}? Say yes or no.")
     print(f"🔐 Awaiting confirmation for tool={tool}")
 
-    audio, sr = listener.listen_for_command()
+    # A direct question, so the answer needs no wake word. Wait for the question to
+    # finish first, or the microphone would record Jarvis asking it.
+    wait_until_quiet(settle=FOLLOWUP_SETTLE_SECONDS)
+    audio, sr = listener.listen_for_followup(FOLLOWUP_SECONDS)
     if audio.size == 0:
         speak("No confirmation received. Cancelling.")
         return False
@@ -84,6 +108,59 @@ def _confirm_action(listener: ContinuousListener, decision: dict) -> bool:
 
     speak("Couldn't verify. Cancelling.")
     return False
+
+
+# ── Follow-up conversation ───────────────────────────────────────────────────
+
+def _clean_phrase(text: str) -> str:
+    """Lower-case, drop punctuation (keeping apostrophes), squash spaces."""
+    return " ".join(re.sub(r"[^a-z0-9' ]+", " ", (text or "").lower().replace("\u2019", "'")).split())
+
+
+def _is_noise(text: str) -> bool:
+    """True for what whisper makes up from silence or background sound."""
+    raw = (text or "").strip()
+    if re.fullmatch(r"[\[(*].*[\])*]", raw):          # [BLANK_AUDIO], (music), *noise*
+        return True
+    cleaned = _clean_phrase(raw)
+    return len(re.sub(r"[^a-z]", "", cleaned)) < 2 or cleaned in _NOISE_WORDS
+
+
+def _follow_up(listener: ContinuousListener, state: JarvisState):
+    """
+    Keep the conversation going without the wake word. After each reply, wait for Jarvis to
+    finish speaking, then listen for a few seconds. Ends quietly on silence, noise, or
+    "thanks" / "that's all". Returns "exit" only if told to shut down.
+    """
+    for _ in range(FOLLOWUP_MAX_TURNS):
+        wait_until_quiet(settle=FOLLOWUP_SETTLE_SECONDS)
+
+        state.transition(State.LISTENING)
+        emit_event("state", state="listening")
+        audio, sr = listener.listen_for_followup(FOLLOWUP_SECONDS)
+        if audio.size == 0:
+            return None
+
+        state.transition(State.PLANNING)
+        emit_event("state", state="thinking")
+        try:
+            text = (transcribe(audio, sr) or "").strip()
+        except Exception as e:
+            save_action("transcription", "", "failure", str(e))
+            return None
+
+        if not text or _is_noise(text) or _clean_phrase(text) in END_CONVERSATION:
+            return None
+
+        print(f"🧠 You said: {text}")
+        emit_event("heard", text=text)
+
+        state.transition(State.EXECUTING)
+        outcome = _process_command(text, listener)
+        state.transition(State.SPEAKING)
+        if outcome == "exit":
+            return "exit"
+    return None
 
 
 # ── Main loop ─────────────────────────────────────────────────────────────────
@@ -185,7 +262,8 @@ def main():
 
     print(f"🔊 Voice: {describe_engine()}")
     speak("Jarvis online.")
-    print("🟢 Jarvis running. Say the wake word or double-clap to activate.")
+    follow = f" Then keep talking for {FOLLOWUP_SECONDS}s after each reply." if FOLLOWUP_ENABLED else ""
+    print(f"🟢 Jarvis running. Say the wake word or double-clap to activate.{follow}")
 
     try:
         while True:
@@ -222,6 +300,9 @@ def main():
                 state.transition(State.SPEAKING)
 
                 if outcome == "exit":
+                    break
+
+                if FOLLOWUP_ENABLED and _follow_up(listener, state) == "exit":
                     break
 
             except KeyboardInterrupt:

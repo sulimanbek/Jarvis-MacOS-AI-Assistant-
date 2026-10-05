@@ -158,7 +158,7 @@ def test_speak_dispatches_run_say_via_thread(monkeypatch):
     tts.speak("hello there")
 
     assert len(started) == 1
-    assert started[0][0] == tts._run_speech
+    assert started[0][0] == tts._speak_job
     say_only = [c for c in say_calls if c[0] == "say"]
     assert len(say_only) == 1
 

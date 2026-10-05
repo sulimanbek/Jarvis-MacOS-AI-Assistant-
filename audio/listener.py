@@ -7,6 +7,7 @@ import numpy as np
 import sounddevice as sd
 
 from audio.tts import speak_sync
+from audio.utterance import DONE, TIMED_OUT, UtteranceDetector
 from audio.wake_word import CHUNK_SAMPLES, WakeWordDetector
 from config import (
     AUDIO_CHANNELS,
@@ -16,6 +17,8 @@ from config import (
     CLAP_MAX_DURATION_MS,
     CLAP_MAX_GAP_MS,
     CLAP_MIN_GAP_MS,
+    FOLLOWUP_ONSET_CHUNKS,
+    FOLLOWUP_ONSET_ENERGY,
     WAKE_WORD_MODEL,
     WAKE_WORD_THRESHOLD,
 )
@@ -53,6 +56,47 @@ class ContinuousListener:
 
     def stop(self):
         self._stop_event.set()
+
+    def listen_for_followup(self, window_seconds: float) -> tuple[np.ndarray, int]:
+        """
+        Listen for a reply with no wake word: wait up to `window_seconds` for the user to
+        start talking, record until they stop, and return (audio, sample_rate). Returns an
+        empty array if nobody spoke (or the listener was stopped).
+        """
+        chunk_seconds = CHUNK_SAMPLES / AUDIO_SAMPLE_RATE
+        detector = UtteranceDetector(
+            onset_energy=FOLLOWUP_ONSET_ENERGY,
+            silence_energy=VAD_ENERGY_THRESHOLD,
+            onset_chunks=FOLLOWUP_ONSET_CHUNKS,
+            window_chunks=max(1, int(window_seconds / chunk_seconds)),
+            silence_chunks=int(VAD_SILENCE_SECONDS / chunk_seconds),
+            max_chunks=int(MAX_COMMAND_SECONDS / chunk_seconds),
+        )
+        finished = threading.Event()
+
+        def callback(indata, frames, time_info, status):
+            if self._stop_event.is_set():
+                finished.set()  # or the caller would wait out the whole window
+                raise sd.CallbackStop()
+            state = detector.feed(indata.copy().squeeze().astype(np.float32))
+            if self.on_level is not None:
+                self.on_level(detector.last_rms)
+            if state in (DONE, TIMED_OUT):
+                finished.set()
+                raise sd.CallbackStop()
+
+        with sd.InputStream(
+            samplerate=AUDIO_SAMPLE_RATE,
+            channels=AUDIO_CHANNELS,
+            dtype=AUDIO_DTYPE,
+            blocksize=CHUNK_SAMPLES,
+            callback=callback,
+        ):
+            finished.wait(timeout=window_seconds + MAX_COMMAND_SECONDS + 5)
+
+        if self.on_level is not None:
+            self.on_level(0.0)
+        return detector.audio(), AUDIO_SAMPLE_RATE
 
     def listen_for_command(self) -> tuple[np.ndarray, int]:
         """

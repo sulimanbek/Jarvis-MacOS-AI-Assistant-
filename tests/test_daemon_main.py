@@ -1,3 +1,5 @@
+import pytest
+
 import daemon
 
 
@@ -24,8 +26,19 @@ class _FakeListener:
             raise item
         return item
 
+    def listen_for_followup(self, window_seconds):
+        """Replies need no wake word; scripted from the same queue."""
+        self.followup_windows = getattr(self, "followup_windows", []) + [window_seconds]
+        return self.listen_for_command()
+
     def stop(self):
         self.stopped = True
+
+
+@pytest.fixture(autouse=True)
+def _no_followup(monkeypatch):
+    """These tests cover one command at a time; follow-ups have their own tests."""
+    monkeypatch.setattr(daemon, "FOLLOWUP_ENABLED", False)
 
 
 def _silence(monkeypatch):

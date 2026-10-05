@@ -8,7 +8,7 @@ import tempfile
 import time
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
-from threading import RLock, Thread
+from threading import Condition, RLock, Thread
 
 import requests
 
@@ -122,6 +122,40 @@ def _prepare_tts_text(text: str) -> str:
 
 
 _player: subprocess.Popen | None = None
+
+# How many speak() calls have been made but not finished. speak() returns at once and
+# talks on a thread, so without this there is no way to tell when it is safe to listen.
+_pending = 0
+_quiet = Condition()
+
+
+def _begin_speech() -> None:
+    global _pending
+    with _quiet:
+        _pending += 1
+
+
+def _end_speech() -> None:
+    global _pending
+    with _quiet:
+        _pending = max(0, _pending - 1)
+        _quiet.notify_all()
+
+
+def wait_until_quiet(timeout: float = 45.0, settle: float = 0.0) -> bool:
+    """
+    Block until everything Jarvis was asked to say has been spoken, so the microphone
+    doesn't record his own voice. Returns False if it timed out.
+
+    `settle` is an extra pause after real speech (not when nothing was playing), to let
+    the sound die away in the room.
+    """
+    with _quiet:
+        was_speaking = _pending > 0
+        ok = _quiet.wait_for(lambda: _pending == 0, timeout=timeout)
+    if ok and was_speaking and settle > 0:
+        time.sleep(settle)
+    return ok
 
 
 def _stop_existing_speech():
@@ -348,11 +382,25 @@ def speak_sync(text: str):
         _run_speech(text)
 
 
+def _speak_job(text: str):
+    try:
+        _run_speech(text)
+    except Exception as e:  # a speech thread must never die loudly or leave the waiter hanging
+        print(f"❌ TTS error: {e}")
+    finally:
+        _end_speech()
+
+
 def speak(text: str):
     if not text or not text.strip():
         return
 
-    Thread(target=_run_speech, args=(text,), daemon=True).start()
+    _begin_speech()
+    try:
+        Thread(target=_speak_job, args=(text,), daemon=True).start()
+    except Exception:
+        _end_speech()
+        raise
 
 
 def speak_ack():

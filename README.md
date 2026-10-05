@@ -62,6 +62,20 @@ launched Jarvis may control Calendar or Mail: allow it under System Settings, Pr
 & Security, Automation. Repeating events show only on their first day (an AppleScript
 limit).
 
+## Talking back and forth
+
+After Jarvis answers, it keeps listening for about 7 seconds, so you can reply or ask a follow-up
+**without saying "hey jarvis" again** ("what's the weather?" ... "and tomorrow?" ... "thanks").
+It waits until Jarvis has finished speaking before it listens, so it doesn't hear itself. It goes
+back to waiting for the wake word after a quiet moment, or when you say "thanks", "that's all",
+"never mind" or "stop". Yes/no confirmations ("Should I proceed?") also need no wake word.
+
+- **Anything said in the room during that window counts as a command**, including the TV or other
+  people. If that's a problem, shorten `FOLLOWUP_SECONDS`, raise `FOLLOWUP_ONSET_ENERGY` in
+  `config.py`, or turn it off with `JARVIS_FOLLOWUP=0`. The wake word and clap work as before.
+- You can't interrupt Jarvis mid-sentence; wait for him to finish.
+- Only `daemon.py` (always-on) does this. Push-to-talk (`jarvis.py`) is unchanged.
+
 ## A better voice (ElevenLabs)
 
 The default Mac voice sounds robotic. For a natural one, create a free account at
@@ -148,6 +162,7 @@ Everything is in `config.py`.
 | `WAKE_WORD_MODEL`, `WAKE_WORD_THRESHOLD` | Wake word |
 | `CLAP_ENERGY_THRESHOLD`, `CLAP_MAX_GAP_MS` | Double-clap tuning |
 | `AGENT_MAX_STEPS` | Cap on multi-step plans (default 5) |
+| `FOLLOWUP_ENABLED`, `FOLLOWUP_SECONDS`, `FOLLOWUP_ONSET_ENERGY` | Reply without the wake word, and how long and how loud |
 
 Bridge settings (model, effort, extra MCP servers, write mode) are environment variables; see `ui-bridge/README.md`. To cut Claude usage, set `JARVIS_MODEL` to a smaller model and lower `JARVIS_EFFORT`.
 
