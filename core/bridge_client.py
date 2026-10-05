@@ -28,6 +28,8 @@ from websockets.exceptions import WebSocketException
 from websockets.sync.client import ClientConnection, connect
 
 from config import (
+    BRAIN_MODE,
+    BRIDGE_EVENTS_URL,
     BRIDGE_TOKEN_FILE,
     BRIDGE_URL,
     CLAUDE_CONNECT_TIMEOUT,
@@ -222,7 +224,8 @@ def get_client() -> BridgeClient:
     global _client
     with _client_lock:
         if _client is None:
-            _client = BridgeClient()
+            # Local mode never asks Claude, so it only needs the events channel.
+            _client = BridgeClient(url=BRIDGE_EVENTS_URL if BRAIN_MODE == "local" else BRIDGE_URL)
         return _client
 
 

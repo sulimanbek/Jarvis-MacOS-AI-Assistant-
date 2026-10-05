@@ -208,3 +208,14 @@ def test_reconnects_after_the_cooldown(bridge):
     threading.Event().wait(0.4)  # past the 0.3s cooldown
     bridge.script = lambda ws, msg: ws.send(json.dumps({"type": "done", "text": "back", "ask": msg["id"]}))
     assert c.ask("hi") == "back"
+
+
+def test_get_client_uses_events_channel_in_local_mode(monkeypatch):
+    import core.bridge_client as bc
+
+    monkeypatch.setattr(bc, "_client", None)
+    monkeypatch.setattr(bc, "BRAIN_MODE", "local")
+    assert bc.get_client()._url == bc.BRIDGE_EVENTS_URL
+    monkeypatch.setattr(bc, "_client", None)
+    monkeypatch.setattr(bc, "BRAIN_MODE", "claude")
+    assert bc.get_client()._url == bc.BRIDGE_URL

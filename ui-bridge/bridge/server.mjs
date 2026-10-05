@@ -1165,13 +1165,13 @@ const wss = new WebSocketServer({
   // 403 would look like the bridge simply isn't running.
   verifyClient: ({ origin, req }, done) => {
     const path = (req.url ?? '/').split('?')[0]
-    if (path === '/core') {
+    if (path === '/core' || path === '/events') {
       if (origin) {
-        console.warn('[jarvis] rejected /core from a browser origin')
+        console.warn(`[jarvis] rejected ${path} from a browser origin`)
         return done(false, 403, 'Forbidden')
       }
       if (!tokenOk(req.headers['x-jarvis-token'])) {
-        console.warn('[jarvis] rejected /core: bad token')
+        console.warn(`[jarvis] rejected ${path}: bad token`)
         return done(false, 401, 'Unauthorized')
       }
       return done(true)
@@ -1236,7 +1236,16 @@ const RESULT_FAILURES = {
 }
 
 wss.on('connection', (socket, req) => {
-  const isCore = (req.url ?? '/').split('?')[0] === '/core'
+  const path = (req.url ?? '/').split('?')[0]
+  // /core: the Python core, with its own Claude session.
+  // /events: the Python core in local mode — it only reports to the HUD, so no
+  //   Claude session is started and nothing needs the network.
+  const isCore = path === '/core' || path === '/events'
+  // A HUD page that only displays (core mode) has no use for an agent of its
+  // own either; the core's session does the work and draws on this page.
+  const noSession =
+    path === '/events' ||
+    (!isCore && new URL(req.url ?? '/', 'http://x').searchParams.get('display') === '1')
   console.log(`[jarvis] ${isCore ? 'core' : 'client'} connected`)
 
   if (isCore) {
@@ -1438,7 +1447,15 @@ wss.on('connection', (socket, req) => {
     if (!failed) sendTurn({ type: 'tool', name })
   }
 
-  const session = query({
+  // A connection with no agent: iterating it ends at once, and it can be
+  // interrupted or closed like the real thing.
+  const idleSession = {
+    interrupt: async () => {},
+    close: () => {},
+    async *[Symbol.asyncIterator]() {},
+  }
+
+  const session = noSession ? idleSession : query({
     prompt: userMessages(),
     options: {
       // Everything Claude Code has configured, plus the HUD as an in-process

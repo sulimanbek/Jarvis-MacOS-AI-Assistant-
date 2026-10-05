@@ -1,6 +1,6 @@
 import type { AskHandlers } from './anthropic'
 import type { Blade, Panel } from '../store'
-import { BRIDGE_WS_URL } from '../config'
+import { BRIDGE_WS_URL, CORE_MODE } from '../config'
 
 /**
  * Client for the local bridge (see bridge/server.mjs).
@@ -245,7 +245,13 @@ function connect(): Promise<WebSocket> {
   firstReady = deferred()
 
   connecting = new Promise<WebSocket>((resolve, reject) => {
-    const ws = new WebSocket(BRIDGE_WS_URL)
+    // In core mode this page only displays; ?display=1 tells the bridge not to
+    // start an agent for it.
+    const ws = new WebSocket(
+      CORE_MODE
+        ? `${BRIDGE_WS_URL}${BRIDGE_WS_URL.includes('?') ? '&' : '?'}display=1`
+        : BRIDGE_WS_URL,
+    )
     let settled = false
 
     /**

@@ -76,6 +76,9 @@ BRAIN_MODE = os.environ.get("JARVIS_BRAIN", "claude").strip().lower()
 # The bridge's private channel for this process. The token file is written by
 # the bridge on each start (owner-only) and read here on each connect.
 BRIDGE_URL = os.environ.get("JARVIS_BRIDGE_URL", "ws://127.0.0.1:8787/core")
+# In "local" mode Claude is never used, so Python only reports to the HUD over
+# this events-only channel — the bridge starts no Claude session for it.
+BRIDGE_EVENTS_URL = os.environ.get("JARVIS_BRIDGE_EVENTS_URL", "ws://127.0.0.1:8787/events")
 BRIDGE_TOKEN_FILE = expand("~/.jarvis/bridge-token")
 
 CLAUDE_TIMEOUT = 45             # seconds to wait for a whole Claude turn

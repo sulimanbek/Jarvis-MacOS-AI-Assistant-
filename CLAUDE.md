@@ -26,8 +26,9 @@ python daemon.py
 No build step. Tests: `pytest` (config in `pyproject.toml`); lint: `ruff`.
 
 **Everything at once (Claude brain + HUD + Python core):** `scripts/start_all.sh`
-(`--ptt` push-to-talk, `--writes` allow Claude to act in the browser, `--local`
-fully offline). Needs Node 20+ and a Claude Code login.
+(`--ptt` push-to-talk, `--writes` allow Claude to act in the browser, `--local` HUD with
+the local Ollama brain only, `--local --no-hud` headless and fully offline). Needs Node 20+
+and a Claude Code login for the Claude brain; `--local --no-hud` needs neither.
 
 ## Two Entry Points
 
@@ -54,7 +55,8 @@ a Node bridge running the Claude Agent SDK plus a React/Three.js holographic HUD
 
 - The router's LLM fallback tries **Claude first** (`BRAIN_MODE = "claude"`), then Ollama if the
   bridge is down or Claude's turn fails. The regex fast-path and multi-step agent stay local and
-  never touch Claude. `BRAIN_MODE = "local"` (or `JARVIS_BRAIN=local`) never contacts the bridge.
+  never touch Claude. `BRAIN_MODE = "local"` (or `JARVIS_BRAIN=local`) never asks Claude; it still reports to the HUD over
+  the bridge's token-authenticated `/events` channel, which starts no Claude session.
 - Python connects to the bridge's private `/core` WebSocket with a token the bridge writes
   (owner-only) to `~/.jarvis/bridge-token`. `BridgeClient.ask()` sends a request and streams
   back Claude's answer; `emit()` pushes state/heard/reply events that the HUD displays.

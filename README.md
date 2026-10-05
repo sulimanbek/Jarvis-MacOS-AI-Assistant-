@@ -63,7 +63,8 @@ cd ui-bridge && npm install && cd ..     # optional: only for Claude + HUD
 scripts/start_all.sh            # bridge + HUD + always-on Jarvis (wake word / double clap)
 scripts/start_all.sh --ptt      # push-to-talk instead
 scripts/start_all.sh --writes   # let Claude click/type/navigate in the browser (each asks first)
-scripts/start_all.sh --local    # no bridge, no HUD: fully offline, Ollama only
+scripts/start_all.sh --local    # HUD + local Ollama brain; Claude is never contacted
+scripts/start_all.sh --local --no-hud   # headless and fully offline (no Node needed)
 ```
 
 Open `http://localhost:5173` in Chrome (the script does this), click **INITIALISE**, then clap twice or say the wake word (default: "alexa").
@@ -110,7 +111,7 @@ Bridge settings (model, effort, extra MCP servers, write mode) are environment v
   - only read-only MCP servers load unless you opt in (`JARVIS_MCP_SERVERS`)
   - navigation, network-body reads and `WebFetch` are off by default, and need write mode plus a confirmation, because a URL can carry data out
   - in read-only mode the built-in write tools are removed outright
-- **Privacy:** with the Claude brain on, the text of requests that reach Claude is sent to Anthropic. Speech recognition and the wake word stay on your Mac. With `--local` nothing leaves the machine.
+- **Privacy:** with the Claude brain on, the text of requests that reach Claude is sent to Anthropic. Speech recognition and the wake word stay on your Mac. With `--local` nothing is sent to Claude and no Claude process is started (the HUD still runs, but its web fonts are fetched from Google unless you're offline).
 - **Secrets:** `.env`, `memory/actions.json`, `memory/context.json` and `memory/profile.json` are git-ignored.
 
 ---
