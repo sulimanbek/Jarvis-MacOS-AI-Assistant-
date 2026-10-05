@@ -36,7 +36,7 @@ fast-path   multi-step agent     Claude (via bridge)  ──►  Ollama if bridg
 |---|---|---|
 | **Fast-path** | play, open, volume, battery, reminders, notes, "play that again" | none |
 | **Multi-step agent** | "open Safari and then play Mozart": plan is validated (allowlist, max 5 steps, no shell), run step by step, each step verified | local model |
-| **Claude** | questions, conversation, anything unusual | your Claude usage |
+| **Claude** | questions, conversation, anything unusual, and live answers (news, weather, scores) via built-in web search | your Claude usage |
 
 The **HUD** (`ui-bridge/`) is a blue React + Three.js interface (a glowing reactor ring over a realistic night sky, status rails and the conversation) that runs display-only: it shows state, what was heard, replies, and anything Claude puts on screen. The Python process keeps the microphone and the voice.
 
