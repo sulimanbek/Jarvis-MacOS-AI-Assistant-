@@ -82,7 +82,7 @@ const coreWaiting = new Map()
 let coreAsks = 0
 
 /** What a core event may say to the HUD. Anything else is dropped. */
-const CORE_EVENT_KINDS = new Set(['online', 'state', 'heard', 'reply', 'route', 'error'])
+const CORE_EVENT_KINDS = new Set(['online', 'state', 'heard', 'reply', 'route', 'error', 'level'])
 
 /**
  * A crash here takes the whole assistant down mid-sentence, and most of what
@@ -1762,6 +1762,11 @@ wss.on('connection', (socket, req) => {
           state: clip(e.state, 20),
           text: clip(e.text, 2000),
           source: clip(e.source, 20),
+          // The microphone level, 0..1. A number and nothing else.
+          level:
+            typeof e.level === 'number' && Number.isFinite(e.level)
+              ? Math.max(0, Math.min(1, e.level))
+              : undefined,
         })
       }
     }

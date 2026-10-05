@@ -335,6 +335,16 @@ The old particle shell was replaced by a realistic night sky
 natural star colours, twinkle, parallax and a procedural Milky Way. In display-only mode
 (`VITE_CORE_MODE=1`) the live caption is not shown, because the log already has it.
 
+Two effects make the display respond to what is happening:
+
+- **Voice reactivity.** The Python core streams a 0-1 microphone level (about 15 times a
+  second, a single number, never audio) over the bridge, and the ring, rails and stars
+  follow it. While Jarvis speaks there is no audio to measure in the page, so it follows
+  a synthetic speech-rhythm envelope instead (`src/lib/coreLevel.ts`).
+- **Warp streaks.** While Jarvis is thinking or working, thin streaks of light rush
+  outward from behind the ring and the real stars dim; they ease away when he answers
+  (`src/scene/WarpStreaks.tsx`).
+
 ---
 
 ## Credits & licence

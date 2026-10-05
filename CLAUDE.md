@@ -61,6 +61,8 @@ a Node bridge running the Claude Agent SDK plus a React/Three.js holographic HUD
   (owner-only) to `~/.jarvis/bridge-token`. `BridgeClient.ask()` sends a request and streams
   back Claude's answer; `emit()` pushes state/heard/reply events that the HUD displays.
   The HUD runs display-only (`VITE_CORE_MODE=1`): Python keeps the mic, whisper and `say`.
+  `core/level_stream.py` sends your mic level (one 0-1 number, ~15/s, from its own thread so the
+  audio callback never blocks) as droppable `level` events, which never dial or wait on the lock.
 - Claude can act on the Mac through the bridge's `mac_action` tool, which calls back into Python
   (`core/mac_actions.py`). Those calls go through the same validator and executor, but are held to
   a stricter bar than your voice: `browser`/`open`/`shortcut` always need a spoken yes, and

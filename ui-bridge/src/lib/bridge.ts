@@ -36,6 +36,7 @@ type Frame = {
   kind?: string
   state?: string
   source?: string
+  level?: number
   mode?: string
   seconds?: number
   when?: string
@@ -108,7 +109,14 @@ export function watchUi(fn: (op: string, args: any) => void) {
 /** What the Python core reports it is doing: state changes, what it heard, its
  *  replies, and which tool Claude is using. Display only — nothing here is sent
  *  back, and the bridge only forwards a fixed set of fields. */
-export type CoreEvent = { kind: string; text?: string; state?: string; source?: string }
+export type CoreEvent = {
+  kind: string
+  text?: string
+  state?: string
+  source?: string
+  /** Microphone level, 0..1, on `level` events. */
+  level?: number
+}
 let onCore: ((e: CoreEvent) => void) | null = null
 export function watchCore(fn: (e: CoreEvent) => void) {
   onCore = fn
@@ -218,7 +226,13 @@ function dispatch(ws: WebSocket) {
           .catch((err) => reply({ error: String(err?.message ?? err) }))
       }
     } else if (msg.type === 'core' && typeof msg.kind === 'string') {
-      onCore?.({ kind: msg.kind, text: msg.text, state: msg.state, source: msg.source })
+      onCore?.({
+        kind: msg.kind,
+        text: msg.text,
+        state: msg.state,
+        source: msg.source,
+        level: msg.level,
+      })
     } else if (msg.type === 'confirm' && msg.id) {
       // The bridge is holding an effectful tool call until this answers. It
       // blocks the page on purpose: nothing should run while the question is up.

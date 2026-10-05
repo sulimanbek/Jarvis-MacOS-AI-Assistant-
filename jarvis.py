@@ -1,3 +1,4 @@
+import atexit
 import os
 import shutil
 
@@ -5,11 +6,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from audio.ptt import record_push_to_talk
+from audio.ptt import record_push_to_talk, set_level_callback
 from audio.tts import speak
 from config import BRAIN_MODE, WHISPER_BIN, WHISPER_MODEL
 from core.bridge_client import emit_event, get_client
 from core.executor import execute
+from core.level_stream import LevelStreamer
 from core.mac_actions import set_confirmer
 from core.router import route
 from core.stt.whisper_cpp import transcribe
@@ -105,6 +107,12 @@ def main():
 
     # Lets Claude's mac_action requests ask you for a spoken yes before they run.
     set_confirmer(_confirm_action)
+
+    # Your voice level for the HUD (a single number, never audio).
+    levels = LevelStreamer()
+    levels.start()
+    atexit.register(levels.stop)
+    set_level_callback(levels.push)
     if BRAIN_MODE == "claude":
         if get_client().warm():
             print("✅ Claude bridge connected.")

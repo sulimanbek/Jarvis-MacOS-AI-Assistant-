@@ -49,6 +49,7 @@ const starVertex = /* glsl */ `
   uniform float uLevel;
   uniform float uPx;
   uniform float uTwinkle;
+  uniform float uWarp;
   uniform vec2 uCam;
   uniform vec3 uTint;
 
@@ -75,7 +76,8 @@ const starVertex = /* glsl */ `
     // Slow scintillation, a different rate and phase for every star.
     float tw = 1.0 - uTwinkle * aTw *
       (0.5 + 0.5 * sin(uTime * (0.7 + aSeed * 2.1) + aSeed * 40.0));
-    vB = aBright * tw * (1.0 + uLevel * 0.5);
+    // The warp streaks take over from the stars while he works.
+    vB = aBright * tw * (1.0 + uLevel * 0.5) * (1.0 - 0.6 * uWarp);
 
     // Colour temperature: cool blue-white -> white -> warm.
     vec3 cool = vec3(0.62, 0.78, 1.0);
@@ -276,6 +278,7 @@ export function Starfield({ drive }: { drive: Drive }) {
       uLevel: { value: 0 },
       uPx: { value: 1 },
       uTwinkle: { value: 0.28 },
+      uWarp: { value: 0 },
       uCam: { value: new THREE.Vector2() },
       uTint: { value: new THREE.Color('#4f8cff') },
     }),
@@ -299,6 +302,7 @@ export function Starfield({ drive }: { drive: Drive }) {
     if (!s || !nb) return
 
     s.uTime.value = t
+    s.uWarp.value = drive.warp
     // Physical pixels, scaled with the viewport's height, so the sky has the same
     // proportions on a laptop and on a 4K monitor running at 100%.
     s.uPx.value = gl.getPixelRatio() * THREE.MathUtils.clamp(state.size.height / 900, 0.8, 2.6)

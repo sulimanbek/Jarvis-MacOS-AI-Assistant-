@@ -8,6 +8,14 @@ from config import AUDIO_CHANNELS, AUDIO_DTYPE, AUDIO_SAMPLE_RATE
 
 DEFAULT_TRIGGER_KEY = keyboard.Key.alt_r
 
+# Optional: called with each chunk's RMS while recording (see core/level_stream).
+_level_callback = None
+
+
+def set_level_callback(fn) -> None:
+    global _level_callback
+    _level_callback = fn
+
 
 def record_push_to_talk(trigger_key=DEFAULT_TRIGGER_KEY):
     """
@@ -25,6 +33,8 @@ def record_push_to_talk(trigger_key=DEFAULT_TRIGGER_KEY):
             print(f"⚠️ Audio status: {status}")
         if recording.is_set():
             frames.append(indata.copy())
+            if _level_callback is not None:
+                _level_callback(float(np.sqrt(np.mean(indata ** 2))))
 
     def on_press(key):
         if key == trigger_key and not recording.is_set():

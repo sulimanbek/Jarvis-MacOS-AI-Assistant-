@@ -49,11 +49,13 @@ def _speak_sync(text: str):
 
 
 class ContinuousListener:
-    def __init__(self, on_triggered=None):
+    def __init__(self, on_triggered=None, on_level=None):
         self.detector = WakeWordDetector(WAKE_WORD_MODEL, WAKE_WORD_THRESHOLD)
         self._stop_event = threading.Event()
         # Called once when a wake word or double clap fires, before "Yes?".
         self.on_triggered = on_triggered
+        # Called with each chunk's RMS, from the audio thread: keep it trivial.
+        self.on_level = on_level
 
     def stop(self):
         self._stop_event.set()
@@ -79,6 +81,8 @@ class ContinuousListener:
 
             # ── Clap detection ────────────────────────────────────────────
             rms = float(np.sqrt(np.mean(chunk ** 2)))
+            if self.on_level is not None:
+                self.on_level(rms)
             is_loud = rms >= CLAP_ENERGY_THRESHOLD
 
             if is_loud and not clap.in_clap:
@@ -159,6 +163,8 @@ class ContinuousListener:
             chunk_count["n"] += 1
 
             rms = float(np.sqrt(np.mean(chunk ** 2)))
+            if self.on_level is not None:
+                self.on_level(rms)
             if rms < VAD_ENERGY_THRESHOLD:
                 silence_chunks["n"] += 1
             else:

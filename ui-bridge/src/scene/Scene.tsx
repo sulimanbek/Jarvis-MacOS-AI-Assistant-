@@ -11,6 +11,7 @@ import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { Core } from './Core'
 import { Starfield } from './Starfield'
+import { WarpStreaks } from './WarpStreaks'
 import { Orbits } from './Orbits'
 import { useStore, phaseColor, accentFor, type Phase } from '../store'
 
@@ -68,6 +69,11 @@ export type Drive = {
   /** 0..1 power-up reveal — the ring assembles outwards from the centre. */
   open: number
   /**
+   * 0..1 warp amount. Eases up while he is thinking or working and back down
+   * when he answers; the streaks and the star dimming both follow it.
+   */
+  warp: number
+  /**
    * The reactor slice of the ui state, already resolved and smoothed.
    *
    * Everything here is a no-op at UI_DEFAULTS: colour follows the phase exactly
@@ -114,6 +120,7 @@ function Rig() {
       spin: spinFor.offline,
       amp: AMP_CALM,
       open: 0,
+      warp: 0,
       reactor: {
         color: new THREE.Color(phaseColor.offline),
         scale: 1,
@@ -156,6 +163,10 @@ function Rig() {
     drive.reactor.style = STYLE_INDEX[r.style] ?? STYLE_INDEX.ring
     drive.reactor.visible = r.visible
 
+    // Warp while he works: quick to build, a touch slower to ease out.
+    const warpTarget = phase === 'thinking' || phase === 'tooling' ? 1 : 0
+    drive.warp += (warpTarget - drive.warp) * Math.min(1, dt * (warpTarget > drive.warp ? 2.2 : 1.6))
+
     drive.spin += (spinFor[phase] - drive.spin) * Math.min(1, dt * 2)
     drive.amp = phase === 'dormant' || phase === 'offline' ? AMP_CALM : AMP_LIVE
     // Held shut until the reactor is powered on, so the ring builds itself out
@@ -186,6 +197,7 @@ function Rig() {
   return (
     <>
       <Starfield drive={drive} />
+      <WarpStreaks drive={drive} />
       <Core drive={drive} />
       <Orbits />
     </>

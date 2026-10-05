@@ -22,6 +22,7 @@ from config import BRAIN_MODE, WHISPER_BIN, WHISPER_MODEL
 from core.agent import run_agent
 from core.bridge_client import emit_event, get_client
 from core.executor import execute
+from core.level_stream import LevelStreamer
 from core.mac_actions import set_confirmer
 from core.router import route
 from core.state_machine import JarvisState, State
@@ -164,7 +165,12 @@ def main():
         print("⚠️  Ollama could not start. Non-LLM commands will still work.")
 
     state    = JarvisState()
-    listener = ContinuousListener(on_triggered=lambda: emit_event("state", state="listening"))
+    levels   = LevelStreamer()
+    levels.start()
+    listener = ContinuousListener(
+        on_triggered=lambda: emit_event("state", state="listening"),
+        on_level=levels.push,
+    )
 
     # Lets Claude's mac_action requests ask you for a spoken yes before they run.
     set_confirmer(lambda decision: _confirm_action(listener, decision))
@@ -227,6 +233,7 @@ def main():
     except KeyboardInterrupt:
         speak("Goodbye.")
     finally:
+        levels.stop()
         listener.stop()
 
 

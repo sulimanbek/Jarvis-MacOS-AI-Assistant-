@@ -123,6 +123,10 @@ class BridgeClient:
             except BridgeUnavailable:
                 return False
 
+    def emit_level(self, level: float) -> None:
+        """The microphone level, 0..1. Dropped if the bridge is busy or away."""
+        self.emit("level", level=round(max(0.0, min(1.0, float(level))), 3), droppable=True)
+
     def close(self) -> None:
         with self._lock:
             ws, self._ws = self._ws, None
@@ -133,12 +137,32 @@ class BridgeClient:
     # ── HUD events ───────────────────────────────────────────────────────────
 
     def emit(self, kind: str, text: str | None = None, state: str | None = None,
-             source: str | None = None) -> None:
-        """Fire-and-forget. Never raises, never blocks for long."""
+             source: str | None = None, level: float | None = None,
+             droppable: bool = False) -> None:
+        """
+        Fire-and-forget. Never raises, never blocks for long.
+
+        droppable=True is for high-rate events such as the mic level: it never
+        dials the bridge and never waits for the lock, so it can be skipped
+        without delaying anything that matters.
+        """
         if not HUD_EVENTS:
             return
-        event = {k: v for k, v in {"kind": kind, "text": text, "state": state, "source": source}.items()
+        event = {k: v for k, v in {"kind": kind, "text": text, "state": state,
+                                   "source": source, "level": level}.items()
                  if v is not None}
+        if droppable:
+            if not self._lock.acquire(blocking=False):
+                return
+            try:
+                if self._ws is None:
+                    return
+                self._ws.send(json.dumps({"type": "event", "event": event}))
+            except Exception:
+                self._drop()
+            finally:
+                self._lock.release()
+            return
         with self._lock:
             try:
                 ws = self._ensure()

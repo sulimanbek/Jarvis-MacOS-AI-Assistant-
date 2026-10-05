@@ -31,6 +31,7 @@ import {
   type Msg,
 } from './lib/brain'
 import { startAnalyser, micLevel } from './lib/audio'
+import { coreLevel, feedCoreLevel } from './lib/coreLevel'
 import { probeCapabilities } from './lib/capabilities'
 import { env, CORE_MODE } from './config'
 
@@ -398,6 +399,9 @@ export default function App() {
           s.setCaption('')
           s.pushTurn({ id: `j${Date.now()}`, role: 'jarvis', text: e.text ?? '' })
           break
+        case 'level':
+          feedCoreLevel(e.level ?? 0)
+          break
         case 'tool':
           s.setActiveTool(e.text ?? null)
           s.setPhase('tooling')
@@ -607,13 +611,19 @@ export default function App() {
 
   useEffect(() => {
     let raf = 0
+    let last = performance.now()
 
     const pump = () => {
       const st = store.getState()
+      const now = performance.now()
+      const dt = Math.min(0.1, (now - last) / 1000)
+      last = now
       // While speaking, follow JARVIS's own output rather than the mic, so the
-      // orb lip-syncs instead of reacting to room noise.
-      const lvl =
-        st.phase === 'speaking' && speaker.current
+      // orb lip-syncs instead of reacting to room noise. In display-only mode
+      // neither exists here: the Python core streams the level instead.
+      const lvl = CORE_MODE
+        ? coreLevel(st.phase, now / 1000, dt)
+        : st.phase === 'speaking' && speaker.current
           ? speaker.current.level()
           : micLevel()
       st.setLevel(lvl)
