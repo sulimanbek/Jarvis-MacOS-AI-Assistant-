@@ -147,7 +147,7 @@ export const UI_DEFAULTS: UiState = {
   accent: null, background: null, palette: {},
   reactor: { color: null, scale: 1, intensity: 1, spin: 1, style: 'ring', visible: true },
   orbits: [],
-  chrome: { systems: false, transcript: true, toolBadge: true, suggestions: false, brand: true },
+  chrome: { systems: true, transcript: true, toolBadge: true, suggestions: true, brand: true },
   effect: null,
 }
 

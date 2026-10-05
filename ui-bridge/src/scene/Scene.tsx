@@ -1,6 +1,13 @@
 import { useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing'
+import {
+  EffectComposer,
+  Bloom,
+  ChromaticAberration,
+  Vignette,
+  Noise,
+} from '@react-three/postprocessing'
+import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import { Core } from './Core'
 import { Starfield } from './Starfield'
@@ -212,7 +219,7 @@ export function Scene() {
       <EffectComposer multisampling={0}>
         {/* Bloom is what turns additive lines into "hologram". */}
         <Bloom
-          intensity={0.55}
+          intensity={1.15}
           // A higher threshold keeps the mid-tones intact so the orb doesn't
           // flatten into a solid white disc.
           luminanceThreshold={0.22}
@@ -220,7 +227,13 @@ export function Scene() {
           mipmapBlur
           radius={0.72}
         />
-        <Vignette eskil={false} offset={0.25} darkness={0.6} />
+        <ChromaticAberration
+          offset={new THREE.Vector2(0.0009, 0.0012)}
+          radialModulation={false}
+          modulationOffset={0}
+        />
+        <Noise opacity={0.035} blendFunction={BlendFunction.OVERLAY} />
+        <Vignette eskil={false} offset={0.22} darkness={0.95} />
       </EffectComposer>
     </Canvas>
   )

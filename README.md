@@ -1,6 +1,6 @@
 # Jarvis — Voice Assistant for macOS
 
-A voice-activated assistant for macOS. It listens locally, handles common commands instantly without any AI call, and hands everything else to Claude. A minimal blue HUD shows what it's doing.
+A voice-activated assistant for macOS. It listens locally, handles common commands instantly without any AI call, and hands everything else to Claude. A blue holographic HUD shows what it's doing.
 
 - **Local first.** Speech recognition (whisper.cpp), wake word, double-clap trigger, and the voice (`say`) all run on your Mac.
 - **Fast commands cost nothing.** "Open Safari", "volume up", "play Starboy" are matched with regex and run in milliseconds, with no model involved.
@@ -38,7 +38,7 @@ fast-path   multi-step agent     Claude (via bridge)  ──►  Ollama if bridg
 | **Multi-step agent** | "open Safari and then play Mozart": plan is validated (allowlist, max 5 steps, no shell), run step by step, each step verified | local model |
 | **Claude** | questions, conversation, anything unusual | your Claude usage |
 
-The **HUD** (`ui-bridge/`) is a minimal, blue React + Three.js interface (a single glowing ring, a status label and the conversation) that runs display-only: it shows state, what was heard, replies, and anything Claude puts on screen. The Python process keeps the microphone and the voice.
+The **HUD** (`ui-bridge/`) is a blue React + Three.js interface (a glowing reactor ring over a realistic night sky, status rails and the conversation) that runs display-only: it shows state, what was heard, replies, and anything Claude puts on screen. The Python process keeps the microphone and the voice.
 
 ---
 

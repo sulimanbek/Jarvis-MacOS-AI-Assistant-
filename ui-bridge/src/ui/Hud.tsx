@@ -9,13 +9,17 @@ import { GestureGuide } from './GestureGuide'
 
 const statusText: Record<Phase, string> = {
   offline: 'OFFLINE',
-  boot: 'STARTING',
-  dormant: 'READY',
+  boot: 'INITIALISING',
+  dormant: 'STANDBY — SAY “HEY JARVIS”',
   waking: 'ONLINE',
   listening: 'LISTENING',
-  thinking: 'THINKING',
-  tooling: 'WORKING',
-  speaking: 'SPEAKING',
+  thinking: 'PROCESSING',
+  tooling: 'ACCESSING SYSTEMS',
+  speaking: 'RESPONDING',
+}
+
+function Corner({ at }: { at: 'tl' | 'tr' | 'bl' | 'br' }) {
+  return <div className={`corner corner-${at}`} />
 }
 
 /* ------------------------------------------------------------------ decode */
@@ -29,7 +33,7 @@ const statusText: Record<Phase, string> = {
 const GLYPHS = '/\\|<>[]{}=+*#%&$0123456789ABCDEFGHJKLMNPQRSTUVWXYZ'
 
 /** Characters of noise shown ahead of the resolved text. */
-const GHOST = 0
+const GHOST = 22
 /** Repaint interval for the scramble. ~24fps is plenty for glyph noise. */
 const FRAME_MS = 42
 /** Floor on the resolve rate, characters per second. */
@@ -149,6 +153,8 @@ export function Hud() {
   const activeTool = useStore((s) => s.activeTool)
   const connected = useStore((s) => s.connected)
   const error = useStore((s) => s.error)
+  const level = useStore((s) => s.level)
+  const voice = useStore((s) => s.voice)
   const bootNote = useStore((s) => s.bootNote)
   const gestures = useStore((s) => s.gestures)
   const looking = useStore((s) => s.looking)
@@ -176,10 +182,16 @@ export function Hud() {
           behind the transcript and the panels without a z-index war. */}
       <BladeSweep />
 
+      <Corner at="tl" />
+      <Corner at="tr" />
+      <Corner at="bl" />
+      <Corner at="br" />
+
       <header className="hud-top">
         {ui.chrome.brand && (
           <div className="brand">
-            <span className="brand-mark">JARVIS</span>
+            <span className="brand-mark">J.A.R.V.I.S.</span>
+            <span className="brand-sub">Just A Rather Very Intelligent System</span>
           </div>
         )}
 
@@ -214,6 +226,14 @@ export function Hud() {
       )}
 
       {/* Right rail: live telemetry, mostly for flavour */}
+      <aside className="rail rail-right">
+        <div className="rail-title">SIGNAL</div>
+        <div className="meter">
+          <div className="meter-fill" style={{ height: `${level * 100}%` }} />
+        </div>
+        <div className="rail-item mono">{(level * 100).toFixed(0).padStart(3, '0')}%</div>
+      </aside>
+
       <AnimatePresence>
         {activeTool && ui.chrome.toolBadge && (
           <motion.div
@@ -289,6 +309,18 @@ export function Hud() {
       {ui.chrome.suggestions && <Suggestions />}
 
       {error && <div className="error">{error}</div>}
+
+      <footer className="hud-bottom">
+        <span className="hint">
+          say <b>“hey jarvis”</b> · <kbd>Space</kbd> to talk · <kbd>G</kbd> hands
+          {voice && (
+            <>
+              {' · '}
+              <kbd>V</kbd> voice: {voice.replace(/\(.*?\)/g, '').trim()}
+            </>
+          )}
+        </span>
+      </footer>
 
       {/* Last, so a flash or a tear reads as being on the glass rather than
           underneath the chrome. It is pointer-events: none and unmounts the

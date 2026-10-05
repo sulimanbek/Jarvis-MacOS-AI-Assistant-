@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Scene } from './scene/Scene'
 import { Hud } from './ui/Hud'
-import { Boot, BOOT_MS } from './ui/Boot'
+import { Boot } from './ui/Boot'
 import { Ignition } from './ui/Ignition'
 import { Diagnostics } from './ui/Diagnostics'
 import { useStore } from './store'
@@ -353,15 +353,12 @@ export default function App() {
     // Must happen inside the click handler — browsers won't start an
     // AudioContext or speech synthesis without a user gesture.
     await sfx.unlockAudio()
+    sfx.play('boot')
     // The score. Must be started from inside this click handler for the same
-    // reason as the rest of the audio. Skipped in display-only mode: the Python
-    // core owns the sound there, and the page stays quiet.
-    if (!CORE_MODE) {
-      sfx.play('boot')
-      music.enable()
-      music.playBoot()
-      music.startAmbient()
-    }
+    // reason as the rest of the audio.
+    music.enable()
+    music.playBoot()
+    music.startAmbient()
 
     s.setPhase('boot')
 
@@ -533,9 +530,11 @@ export default function App() {
       }, 200)
     }
 
-    // Long enough for the start-up in Boot.tsx to play before the live
-    // interface takes over.
-    await new Promise((r) => setTimeout(r, BOOT_MS))
+    // Long enough for the four-beat start-up sequence in Boot.tsx to play —
+    // status bar, rings, suit schematic, reactor power-up — before the live
+    // interface takes over. Kept a touch under the boot cue so the music is
+    // still rising as the reactor lands.
+    await new Promise((r) => setTimeout(r, 9200)) // boot sequence
     await warming
     store.getState().setConnected(connectedLabels())
     store.getState().setVoice(currentVoiceName())
