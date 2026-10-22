@@ -4,6 +4,7 @@ A voice-activated assistant for macOS. It listens locally, handles common comman
 
 - **Local first.** Speech recognition (whisper.cpp), wake word, double-clap trigger, and the voice (`say`) all run on your Mac.
 - **Fast commands cost nothing.** "Open Safari", "volume up", "play Starboy" are matched with regex and run in milliseconds, with no model involved.
+- **Live answers without an AI.** Weather, news, time, prices, stocks, sports scores, maths, unit conversion, sun times, air quality and more come straight from free public sources (or are worked out offline), in about a second.
 - **Claude for the rest.** Anything the fast path can't match goes to Claude through a small Node bridge. If the bridge is down, Jarvis falls back to a local Ollama model, so it keeps working offline.
 - **Acts on your Mac, with guardrails.** Claude can open apps, play music, change the volume and more, but only through Jarvis's own validator and security policy.
 
@@ -81,8 +82,8 @@ Weather, news, the time, prices, scores and facts are answered **straight from f
 price service, ESPN's public scoreboards, USGS, the World Bank, wheretheiss.at), with no account or API
 key. Maths and unit conversion need no internet at all.
 They take about a second, cost nothing, don't need Claude, and can't be made up the way a
-language model's memory can. Anything else live (sports scores, stocks, "who won last night",
-flights) goes to Claude, which searches the web (10 to 20 seconds); without Claude, Jarvis says
+language model's memory can. Anything else live (flights, traffic, "who won the election")
+goes to Claude, which searches the web (10 to 20 seconds); without Claude, Jarvis says
 it can't rather than guessing.
 
 - **Your city** is taken from your Mac's time zone. Change it with `JARVIS_CITY=London`, units with
@@ -229,15 +230,21 @@ Bridge settings (model, effort, extra MCP servers, write mode) are environment v
 ```text
 daemon.py, jarvis.py     entry points (always-on / push-to-talk)
 core/                    router, agent, planner validation, verifier, executor,
-                         brain_local (Ollama), brain_claude + bridge_client + mac_actions
-audio/                   listener, wake word, clap trigger, push-to-talk, TTS
-tools/                   apps, music, browser, system, Shortcuts, notes, reminders
+                         system_actions registry, brain_local (Ollama),
+                         brain_claude + bridge_client + mac_actions
+audio/                   listener, wake word, clap trigger, push-to-talk, utterance
+                         detection (follow-ups), TTS (ElevenLabs / Mac voice)
+tools/                   apps, music, media controls, browser, system, Shortcuts,
+                         notes, reminders, calendar, mail (read-only)
+                         live (weather, news, time, prices, Wikipedia),
+                         public_info (stocks, sports, sun, air, quakes, ISS, countries),
+                         calc (offline maths and unit conversion)
 security/                policy.py + policy.json
 services/                AppleScript and Ollama wrappers
 memory/                  conversation context and action state
 ui-bridge/               Node bridge (Claude Agent SDK) + React/Three.js HUD
-scripts/start_all.sh     one-command launcher
-tests/                   pytest suite
+scripts/                 start_all.sh launcher, autostart.sh (start at login)
+tests/                   pytest suite (no test touches the network)
 ```
 
 ## Tests
